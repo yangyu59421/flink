@@ -212,6 +212,53 @@ The following table lists the type mapping from Flink type to JSON type.
     </tbody>
 </table>
 
+How is json string converted to Flink SQL Row
+----------------
+Usually, we assume the outer most of json string is a json object. Then the json object is converted to one SQL row.
 
 
+There are some cases that, the outer most of json string is a json array, and we want to explode the array to 
+multiple records, each one of the array is a json object which is converted to one row. Flink JSON Format supports
+read such data implicitly.
 
+For example, for the following SQL DDL:
+<div class="codetabs" markdown="1">
+<div data-lang="SQL" markdown="1">
+{% highlight sql %}
+CREATE TABLE user_behavior (
+  col1 BIGINT,
+  col2 DOUBLE,
+  col3 VARCHAR,
+  col4 BOOLEAN
+) WITH (
+ 'format' = 'json',
+ ...
+)
+{% endhighlight %}
+</div>
+</div>
+
+and with following json string:
+
+<div class="codetabs" markdown="1">
+<div data-lang="JSON" markdown="1">
+{% highlight json %}
+[
+    {
+        "col1": 123,
+        "col2": 12.34,
+        "col3": "str1",
+        "col4": true
+    },
+    {
+        "col1": 456,
+        "col2": 45.67,
+        "col3": "str2",
+        "col4": false
+    },
+]
+{% endhighlight %}
+</div>
+</div>
+
+Flink JSON Format will produce 2 records.
