@@ -30,8 +30,6 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMap
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 import static java.lang.String.format;
@@ -112,26 +110,19 @@ public class JsonRowDataDeserializationSchema implements DeserializationSchema<R
 		try {
 			final JsonNode root = objectMapper.readTree(message);
 
-			if (root.isArray()) {
-				List<RowData> rowDataList = new ArrayList<>();
+			if (root != null && root.isArray()) {
 				ArrayNode arrayNode = (ArrayNode) root;
 				for (int i = 0; i < arrayNode.size(); ++i) {
 					RowData result = (RowData) runtimeConverter.convert(arrayNode.get(i));
 					if (result != null) {
-						rowDataList.add(result);
+						out.collect(result);
 					}
 				}
-
-				// collect final results in a separate for-loop in case of parse errors.
-				for (RowData rowData : rowDataList) {
-					out.collect(rowData);
+			} else {
+				RowData result = (RowData) runtimeConverter.convert(root);
+				if (result != null) {
+					out.collect(result);
 				}
-				return;
-			}
-
-			RowData result = (RowData) runtimeConverter.convert(root);
-			if (result != null) {
-				out.collect(result);
 			}
 		} catch (Throwable t) {
 			if (!ignoreParseErrors) {

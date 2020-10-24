@@ -212,12 +212,14 @@ The following table lists the type mapping from Flink type to JSON type.
     </tbody>
 </table>
 
-How is json string converted to Flink SQL Row
-----------------
-Usually, we assume the outer most of json string is a json object. Then the json object is converted to one SQL row.
+Features
+--------
 
+### Allow top-level JSON Arrays
 
-There are some cases that, the outer most of json string is a json array, and we want to explode the array to 
+Usually, we assume the top-level of json string is a json object. Then the json object is converted to one SQL row.
+
+There are some cases that, the top-level of json string is a json array, and we want to explode the array to 
 multiple records, each one of the array is a json object which is converted to one row. Flink JSON Format supports
 read such data implicitly.
 
@@ -238,27 +240,13 @@ CREATE TABLE user_behavior (
 </div>
 </div>
 
-and with following json string:
-
-<div class="codetabs" markdown="1">
-<div data-lang="JSON" markdown="1">
+Flink JSON Format will produce 2 rows `(123, "a")` and `(456, "b")` with both of following two json string.
+The top-level is JSON Array:
 {% highlight json %}
-[
-    {
-        "col1": 123,
-        "col2": 12.34,
-        "col3": "str1",
-        "col4": true
-    },
-    {
-        "col1": 456,
-        "col2": 45.67,
-        "col3": "str2",
-        "col4": false
-    },
-]
+[{"col1": 123, "col2": "a"}, {"col1": 456, "col2": "b"}]
 {% endhighlight %}
-</div>
-</div>
-
-Flink JSON Format will produce 2 records.
+The top-level is JSON Object:
+{% highlight json %}
+{"col1": 123, "col2": "a"}
+{"col1": 456, "col2": "b"}
+{% endhighlight %}
