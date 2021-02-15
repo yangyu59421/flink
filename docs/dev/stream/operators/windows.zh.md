@@ -351,9 +351,6 @@ input
 
 动态间隔可以通过实现 `SessionWindowTimeGapExtractor` 接口来指定。
 
-需要的是，因为会话窗口并没有固定的开始或技术时间，他们与滑动和滚动窗口的计算方法不同。
-在 Flink 内部，会话窗口的算子会为每一条数据创建一个窗口，长度为定义好的间隔，然后将重叠的窗口合并。
-
 <span class="label label-danger">Attention</span> 因为会话窗口并没有固定的开始或结束时间，
 他们与滑动和滚动窗口的计算方法不同。在 Flink 内部，会话窗口的算子会为每一条数据创建一个窗口，
 长度为定义好的间隔，然后将重叠的窗口合并。
@@ -464,10 +461,10 @@ input
  */
 private static class AverageAggregate
     implements AggregateFunction<Tuple2<String, Long>, Tuple2<Long, Long>, Double> {
-    @Override
-    public Tuple2<Long, Long> createAccumulator() {
+  @Override
+  public Tuple2<Long, Long> createAccumulator() {
     return new Tuple2<>(0L, 0L);
-    }
+  }
 
   @Override
   public Tuple2<Long, Long> add(Tuple2<String, Long> value, Tuple2<Long, Long> accumulator) {
@@ -502,7 +499,7 @@ input
  * computes the average.
  */
 class AverageAggregate extends AggregateFunction[(String, Long), (Long, Long), Double] {
-    override def createAccumulator() = (0L, 0L)
+  override def createAccumulator() = (0L, 0L)
 
   override def add(value: (String, Long), accumulator: (Long, Long)) =
     (accumulator._1 + value._2, accumulator._2 + 1L)
@@ -799,10 +796,10 @@ input
  */
 private static class AverageAggregate
     implements AggregateFunction<Tuple2<String, Long>, Tuple2<Long, Long>, Double> {
-    @Override
-    public Tuple2<Long, Long> createAccumulator() {
+  @Override
+  public Tuple2<Long, Long> createAccumulator() {
     return new Tuple2<>(0L, 0L);
-    }
+  }
 
   @Override
   public Tuple2<Long, Long> add(Tuple2<String, Long> value, Tuple2<Long, Long> accumulator) {
