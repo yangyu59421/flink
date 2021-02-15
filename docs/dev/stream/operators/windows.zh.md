@@ -108,7 +108,7 @@ Window assigner 定义了 stream 中的元素如何被分发到各个窗口。
 Flink 为最常用的情况提供了一些定义好的 window assigner，也就是  *tumbling windows*、
 *sliding windows*、 *session windows* 和 *global windows*。
 你也可以继承 `WindowAssigner` 类来实现自定义的 window assigner。
-所有内置的 window assigner（除了 global window）都是基于时间分发数据的，processing 或 event time 均可。
+所有内置的 window assigner（除了 global window）都是基于时间分发数据的，processing time 或 event time 均可。
 请阅读我们对于 [event time]({% link dev/event_time.zh.md %}) 的介绍来了解这两者的区别，
 以及 timestamp 和 watermark 是如何产生的。
 
