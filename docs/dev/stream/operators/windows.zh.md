@@ -351,10 +351,10 @@ input
 
 动态间隔可以通过实现 `SessionWindowTimeGapExtractor` 接口来指定。
 
-<span class="label label-danger">Attention</span> 因为会话窗口并没有固定的开始或结束时间，
-他们与滑动和滚动窗口的计算方法不同。在 Flink 内部，会话窗口的算子会为每一条数据创建一个窗口，
-长度为定义好的间隔，然后将重叠的窗口合并。
-想要让窗口可以合并，会话窗口需要一个可以合并的 [Trigger](#triggers) 和 [Window Function](#window-functions)，
+<span class="label label-danger">Attention</span> 会话窗口并没有固定的开始或结束时间，
+所以它的计算方法与滑动窗口和滚动窗口不同。在 Flink 内部，会话窗口的算子会为每一条数据创建一个窗口，
+然后将距离不超过预设间隔的窗口合并。
+想要让窗口可以被合并，会话窗口需要拥有支持合并的 [Trigger](#triggers) 和 [Window Function](#window-functions)，
 比如说 `ReduceFunction`、`AggregateFunction`、或`ProcessWindowFunction`。
 
 ### 全局窗口（Global Windows）
