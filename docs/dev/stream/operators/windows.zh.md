@@ -113,7 +113,7 @@ Flink 为最常用的情况提供了一些定义好的 window assigner，也就�
 以及 timestamp 和 watermark 是如何产生的。
 
 基于时间的窗口用 *start timestamp*（包含）和 *end timestamp*（不包含）描述窗口的大小。
-在源代码中，Flink处理基于时间的窗口使用的是 `TimeWindow`，
+在代码中，Flink处理基于时间的窗口使用的是 `TimeWindow`，
 它有查询开始和结束timestamp以及返回窗口所能储存的最大 timestamp 的方法 `maxTimestamp()`。
 
 接下来我们会说明 Flink 内置的 window assigner 如何工作，以及他们如何用在 DataStream 程序中。
