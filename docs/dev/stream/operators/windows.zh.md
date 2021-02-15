@@ -527,7 +527,7 @@ input
 
 ### ProcessWindowFunction
 
-ProcessWindowFunction 有能获取窗口内所有元素的Iterable，
+ProcessWindowFunction 有能获取包含窗口内所有元素的 Iterable，
 以及用来获取时间和状态信息的 Context 对象，比其他窗口函数更加灵活。
 ProcessWindowFunction 的灵活性是以性能和资源消耗为代价的，
 因为窗口中的数据无法被增量聚合，而需要在窗口触发前缓存所有数据。
