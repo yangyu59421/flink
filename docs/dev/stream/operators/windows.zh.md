@@ -77,7 +77,7 @@ Trigger 的触发（fire）条件可能是“当窗口中有多于4条数据”�
 Trigger 还可以在 window 被创建后、删除前的这段时间内定义何时清理（purge）窗口中的数据。
 这里的数据仅指窗口内的元素，不包括窗口的 meta data。也就是说，窗口在 purge 后仍然可以加入新的数据。
 
-除此之外，你也可以指定一个 `Evictor` （详见 [Evictors](#evictors)），在 trigger 触发前后删除数据。
+除此之外，你也可以指定一个 `Evictor` （详见 [Evictors](#evictors)），在 trigger 触发之后，Evictor 可以在窗口函数的前后删除数据。
 
 接下来我们会更详细地介绍上面提到的内容。开头的例子中有必填项和可选项。
 我们先从必填项开始（详见 [Keyed vs Non-Keyed Windows](#keyed-vs-non-keyed-windows)、
