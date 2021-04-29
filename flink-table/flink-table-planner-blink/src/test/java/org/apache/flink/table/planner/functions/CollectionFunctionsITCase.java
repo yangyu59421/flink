@@ -20,22 +20,19 @@ package org.apache.flink.table.planner.functions;
 
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.functions.BuiltInFunctionDefinitions;
-import org.apache.flink.types.Row;
-
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableMap;
 
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.table.api.Expressions.$;
-import static org.apache.flink.table.api.Expressions.array;
 import static org.apache.flink.table.api.Expressions.call;
 import static org.apache.flink.table.api.Expressions.map;
 import static org.apache.flink.table.api.Expressions.mapFromArrays;
-import static org.apache.flink.table.api.Expressions.row;
 
 /** Tests for collections {@link BuiltInFunctionDefinitions}. */
 public class CollectionFunctionsITCase extends BuiltInFunctionTestBase {
@@ -43,167 +40,86 @@ public class CollectionFunctionsITCase extends BuiltInFunctionTestBase {
     @Parameterized.Parameters(name = "{index}: {0}")
     public static List<TestSpec> testData() {
         return Arrays.asList(
-                TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_KEYS, "Null inputs")
-                        .onFieldsWithData(null, null, "item")
+                TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_KEYS)
+                        .onFieldsWithData(
+                                null,
+                                "item",
+                                Collections.singletonMap(1, "value"),
+                                Collections.singletonMap(new Integer[] {1, 2}, "value"))
                         .andDataTypes(
                                 DataTypes.BOOLEAN().nullable(),
-                                DataTypes.INT().nullable(),
-                                DataTypes.STRING())
+                                DataTypes.STRING(),
+                                DataTypes.MAP(DataTypes.INT(), DataTypes.STRING()),
+                                DataTypes.MAP(DataTypes.ARRAY(DataTypes.INT()), DataTypes.STRING()))
                         .testTableApiError(
                                 call("MAP_KEYS", $("f0"), $("f1")),
-                                "Invalid function call:\nMAP_KEYS(BOOLEAN, INT)")
+                                "Invalid function call:\nMAP_KEYS(BOOLEAN, STRING)")
                         .testResult(
                                 map(
                                                 $("f0").cast(DataTypes.BOOLEAN()),
                                                 $("f1").cast(DataTypes.INT()))
                                         .mapKeys(),
-                                "MAP_KEYS(map[cast(f0 as boolean), cast(f1 as int)])",
+                                "MAP_KEYS(MAP[CAST(f0 AS BOOLEAN), CAST(f1 AS STRING)])",
                                 new Boolean[] {null},
-                                DataTypes.ARRAY(DataTypes.BOOLEAN()))
-                        .testTableApiResult(
-                                map($("f2"), $("f1").cast(DataTypes.INT())).mapKeys(),
-                                new String[] {"item"},
-                                DataTypes.ARRAY(DataTypes.STRING()))
-                        .testSqlResult(
-                                "MAP_KEYS(map[cast(NULL as int), 'value'])",
-                                new Integer[] {null},
-                                DataTypes.ARRAY(DataTypes.INT())),
-                TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_KEYS)
-                        .onFieldsWithData(1, "one", 2, "two")
-                        .andDataTypes(
-                                DataTypes.INT(),
-                                DataTypes.STRING(),
-                                DataTypes.INT(),
-                                DataTypes.STRING())
+                                DataTypes.ARRAY(DataTypes.BOOLEAN()).notNull())
                         .testResult(
-                                map($("f0"), $("f1"), $("f2"), $("f3")).mapKeys(),
-                                "MAP_KEYS(map[f0, f1, f2, f3])",
-                                new Integer[] {1, 2},
+                                $("f2").mapKeys(),
+                                "MAP_KEYS(f2)",
+                                new Integer[] {1},
                                 DataTypes.ARRAY(DataTypes.INT()))
-                        .testTableApiResult(
-                                map($("f1"), $("f0"), $("f3"), $("f2")).mapKeys(),
-                                new String[] {"one", "two"},
-                                DataTypes.ARRAY(DataTypes.STRING()))
                         .testResult(
-                                map(map($("f0"), $("f1")), map($("f2"), $("f3"))).mapKeys(),
-                                "MAP_KEYS(map[map[f0, f1], map[f2, f3]])",
-                                new Map[] {ImmutableMap.of(1, "one")},
-                                DataTypes.ARRAY(
-                                        DataTypes.MAP(DataTypes.INT(), DataTypes.STRING())
-                                                .notNull()))
-                        .testResult(
-                                map(array($("f0"), $("f2")), array($("f1"), $("f3"))).mapKeys(),
-                                "MAP_KEYS(map[array[f0, f2], array[f1, f3]])",
+                                $("f3").mapKeys(),
+                                "MAP_KEYS(f3)",
                                 new Integer[][] {new Integer[] {1, 2}},
-                                DataTypes.ARRAY(DataTypes.ARRAY(DataTypes.INT()).notNull()))
-                        .testResult(
-                                map(
-                                                row($("f0"), $("f1"))
-                                                        .cast(
-                                                                DataTypes.ROW(
-                                                                        DataTypes.FIELD(
-                                                                                "EXPR$0",
-                                                                                DataTypes.INT()),
-                                                                        DataTypes.FIELD(
-                                                                                "EXPR$1",
-                                                                                DataTypes
-                                                                                        .STRING()))),
-                                                map($("f2"), $("f3")))
-                                        .mapKeys(),
-                                "MAP_KEYS(map[row(f0, f1), map[f2, f3]])",
-                                new Row[] {Row.of(1, "one")},
-                                DataTypes.ARRAY(
-                                        DataTypes.ROW(
-                                                        DataTypes.FIELD("EXPR$0", DataTypes.INT()),
-                                                        DataTypes.FIELD(
-                                                                "EXPR$1", DataTypes.STRING()))
-                                                .notNull())),
-                TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_VALUES, "Null inputs")
-                        .onFieldsWithData(null, null, "item")
+                                DataTypes.ARRAY(DataTypes.ARRAY(DataTypes.INT()))),
+                TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_VALUES)
+                        .onFieldsWithData(
+                                null,
+                                "item",
+                                Collections.singletonMap(1, "value1"),
+                                Collections.singletonMap(
+                                        3, Collections.singletonMap(true, "value2")))
                         .andDataTypes(
                                 DataTypes.BOOLEAN().nullable(),
-                                DataTypes.INT().nullable(),
-                                DataTypes.STRING())
+                                DataTypes.STRING(),
+                                DataTypes.MAP(DataTypes.INT(), DataTypes.STRING()),
+                                DataTypes.MAP(
+                                        DataTypes.INT(),
+                                        DataTypes.MAP(DataTypes.BOOLEAN(), DataTypes.STRING())))
                         .testTableApiError(
                                 call("MAP_VALUES", $("f0"), $("f1")),
-                                "Invalid function call:\nMAP_VALUES(BOOLEAN, INT)")
+                                "Invalid function call:\nMAP_VALUES(BOOLEAN, STRING)")
                         .testResult(
                                 map(
-                                                $("f0").cast(DataTypes.BOOLEAN()),
-                                                $("f1").cast(DataTypes.INT()))
+                                                $("f1").cast(DataTypes.STRING()),
+                                                $("f0").cast(DataTypes.BOOLEAN()))
                                         .mapValues(),
-                                "MAP_VALUES(map[cast(f0 as boolean), cast(f1 as int)])",
-                                new Integer[] {null},
-                                DataTypes.ARRAY(DataTypes.INT()))
-                        .testTableApiResult(
-                                map($("f1").cast(DataTypes.INT()), $("f2")).mapValues(),
-                                new String[] {"item"},
+                                "MAP_VALUES(MAP[CAST(f1 AS STRING), CAST(f0 AS BOOLEAN)])",
+                                new Boolean[] {null},
+                                DataTypes.ARRAY(DataTypes.BOOLEAN()).notNull())
+                        .testResult(
+                                $("f2").mapValues(),
+                                "MAP_VALUES(f2)",
+                                new String[] {"value1"},
                                 DataTypes.ARRAY(DataTypes.STRING()))
-                        .testSqlResult(
-                                "MAP_VALUES(map['key', cast(NULL as int)])",
-                                new Integer[] {null},
-                                DataTypes.ARRAY(DataTypes.INT())),
-                TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_VALUES)
-                        .onFieldsWithData(1, "one", 2, "two")
-                        .andDataTypes(
-                                DataTypes.INT(),
-                                DataTypes.STRING(),
-                                DataTypes.INT(),
-                                DataTypes.STRING())
                         .testResult(
-                                map($("f0"), $("f1"), $("f2"), $("f3")).mapValues(),
-                                "MAP_VALUES(map[f0, f1, f2, f3])",
-                                new String[] {"one", "two"},
-                                DataTypes.ARRAY(DataTypes.STRING()))
-                        .testTableApiResult(
-                                map($("f1"), $("f0"), $("f3"), $("f2")).mapValues(),
-                                new Integer[] {1, 2},
-                                DataTypes.ARRAY(DataTypes.INT()))
-                        .testResult(
-                                map(map($("f0"), $("f1")), map($("f2"), $("f3"))).mapValues(),
-                                "MAP_VALUES(map[map[f0, f1], map[f2, f3]])",
-                                new Map[] {ImmutableMap.of(2, "two")},
+                                $("f3").mapValues(),
+                                "MAP_VALUES(f3)",
+                                new Map[] {Collections.singletonMap(true, "value2")},
                                 DataTypes.ARRAY(
-                                        DataTypes.MAP(DataTypes.INT(), DataTypes.STRING())
-                                                .notNull()))
-                        .testResult(
-                                map(array($("f0"), $("f2")), array($("f1"), $("f3"))).mapValues(),
-                                "MAP_VALUES(map[array[f0, f2], array[f1, f3]])",
-                                new String[][] {new String[] {"one", "two"}},
-                                DataTypes.ARRAY(DataTypes.ARRAY(DataTypes.STRING()).notNull()))
-                        .testResult(
-                                map(
-                                                map($("f0"), $("f1")),
-                                                row($("f2"), $("f3"))
-                                                        .cast(
-                                                                DataTypes.ROW(
-                                                                        DataTypes.FIELD(
-                                                                                "EXPR$0",
-                                                                                DataTypes.INT()),
-                                                                        DataTypes.FIELD(
-                                                                                "EXPR$1",
-                                                                                DataTypes
-                                                                                        .STRING()))))
-                                        .mapValues(),
-                                "MAP_VALUES(map[map[f0, f1], row(f2, f3)])",
-                                new Row[] {Row.of(2, "two")},
-                                DataTypes.ARRAY(
-                                        DataTypes.ROW(
-                                                        DataTypes.FIELD("EXPR$0", DataTypes.INT()),
-                                                        DataTypes.FIELD(
-                                                                "EXPR$1", DataTypes.STRING()))
-                                                .notNull())),
+                                        DataTypes.MAP(DataTypes.BOOLEAN(), DataTypes.STRING()))),
                 TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_FROM_ARRAYS, "Invalid input")
-                        .onFieldsWithData(null, null, 1)
+                        .onFieldsWithData(null, null, new Integer[] {1}, new Integer[] {1, 2})
                         .andDataTypes(
                                 DataTypes.BOOLEAN().nullable(),
                                 DataTypes.INT().nullable(),
-                                DataTypes.INT())
+                                DataTypes.ARRAY(DataTypes.INT()),
+                                DataTypes.ARRAY(DataTypes.INT()))
                         .testTableApiError(
                                 mapFromArrays($("f0"), $("f1")),
                                 "Invalid function call:\nMAP_FROM_ARRAYS(BOOLEAN, INT)")
                         .testTableApiError(
-                                mapFromArrays(array($("f2")), array($("f2"), $("f2"))),
+                                mapFromArrays($("f2"), $("f3")),
                                 "Invalid function MAP_FROM_ARRAYS call:\n"
                                         + "The length of the keys array 1 is not equal to the length of the values array 2")
                         .testSqlError(
@@ -215,47 +131,32 @@ public class CollectionFunctionsITCase extends BuiltInFunctionTestBase {
                                 "Invalid function MAP_FROM_ARRAYS call:\n"
                                         + "The length of the keys array 3 is not equal to the length of the values array 2"),
                 TestSpec.forFunction(BuiltInFunctionDefinitions.MAP_FROM_ARRAYS)
-                        .onFieldsWithData(1, "one", 2, "two")
+                        .onFieldsWithData(
+                                new Integer[] {1, 2},
+                                new String[] {"one", "two"},
+                                new Integer[][] {new Integer[] {1, 2}, new Integer[] {3, 4}})
                         .andDataTypes(
-                                DataTypes.INT(),
-                                DataTypes.STRING(),
-                                DataTypes.INT(),
-                                DataTypes.STRING())
-                        .testTableApiResult(
-                                call(
-                                        "cardinality",
-                                        mapFromArrays(
-                                                        array($("f1"), $("f3")),
-                                                        array($("f0"), $("f2")))
-                                                .mapValues()),
-                                2,
-                                DataTypes.INT())
+                                DataTypes.ARRAY(DataTypes.INT()),
+                                DataTypes.ARRAY(DataTypes.STRING()),
+                                DataTypes.ARRAY(DataTypes.ARRAY(DataTypes.INT())))
                         .testResult(
-                                mapFromArrays(array($("f0"), $("f2")), array($("f1"), $("f3"))),
-                                "MAP_FROM_ARRAYS(array[f0, f2], array[f1, f3])",
-                                ImmutableMap.of(1, "one", 2, "two"),
+                                mapFromArrays($("f0"), $("f1")),
+                                "MAP_FROM_ARRAYS(f0, f1)",
+                                of(1, "one", 2, "two"),
                                 DataTypes.MAP(DataTypes.INT(), DataTypes.STRING()))
                         .testTableApiResult(
-                                mapFromArrays(array($("f2"), $("f0")), array($("f3"), $("f1"))),
-                                ImmutableMap.of(1, "one", 2, "two"),
-                                DataTypes.MAP(DataTypes.INT(), DataTypes.STRING()))
-                        .testResult(
-                                mapFromArrays(
-                                        array(map($("f0"), $("f2"))), array(map($("f1"), $("f3")))),
-                                "MAP_FROM_ARRAYS(array[map[f0, f2]], array[map[f1, f3]])",
-                                ImmutableMap.of(
-                                        ImmutableMap.of(1, 2), ImmutableMap.of("one", "two")),
+                                mapFromArrays($("f1"), $("f2")),
+                                of("one", new Integer[] {1, 2}, "two", new Integer[] {3, 4}),
                                 DataTypes.MAP(
-                                        DataTypes.MAP(DataTypes.INT(), DataTypes.INT()).notNull(),
-                                        DataTypes.MAP(DataTypes.STRING(), DataTypes.STRING())
-                                                .notNull()))
-                        .testResult(
-                                mapFromArrays(array($("f0")), array(map($("f1"), $("f3")))),
-                                "MAP_FROM_ARRAYS(array[f0], array[map[f1, f3]])",
-                                ImmutableMap.of(1, ImmutableMap.of("one", "two")),
-                                DataTypes.MAP(
-                                        DataTypes.INT(),
-                                        DataTypes.MAP(DataTypes.STRING(), DataTypes.STRING())
-                                                .notNull())));
+                                        DataTypes.STRING(), DataTypes.ARRAY(DataTypes.INT()))));
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    private static <K, V> Map<K, V> of(K k1, V v1, K k2, V v2) {
+        Map<K, V> map = new HashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        return map;
     }
 }

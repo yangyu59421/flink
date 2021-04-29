@@ -19,11 +19,11 @@
 package org.apache.flink.table.runtime.functions.scalar;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.data.ArrayData;
 import org.apache.flink.table.data.MapData;
 import org.apache.flink.table.functions.BuiltInFunctionDefinitions;
 import org.apache.flink.table.functions.SpecializedFunction;
+import org.apache.flink.util.FlinkRuntimeException;
 
 import javax.annotation.Nullable;
 
@@ -34,36 +34,44 @@ public class MapFromArraysFunction extends BuiltInScalarFunction {
         super(BuiltInFunctionDefinitions.MAP_FROM_ARRAYS, context);
     }
 
-    public @Nullable MapData eval(ArrayData keysArray, ArrayData valuesArray) {
-        // we rely on the casting functionality via input type strategy
-        // to determine the common data type
+    public @Nullable MapData eval(@Nullable ArrayData keysArray, @Nullable ArrayData valuesArray) {
         if (keysArray == null || valuesArray == null) {
             return null;
         }
 
         if (keysArray.size() != valuesArray.size()) {
-            throw new ValidationException(
+            throw new FlinkRuntimeException(
                     "Invalid function MAP_FROM_ARRAYS call:\n"
                             + "The length of the keys array "
                             + keysArray.size()
                             + " is not equal to the length of the values array "
                             + valuesArray.size());
         }
-        return new MapData() {
-            @Override
-            public int size() {
-                return keysArray.size();
-            }
+        return new MapDataForMapFromArrays(keysArray, valuesArray);
+    }
 
-            @Override
-            public ArrayData keyArray() {
-                return keysArray;
-            }
+    private static class MapDataForMapFromArrays implements MapData {
+        private final ArrayData keyArray;
+        private final ArrayData valueArray;
 
-            @Override
-            public ArrayData valueArray() {
-                return valuesArray;
-            }
-        };
+        public MapDataForMapFromArrays(ArrayData keyArray, ArrayData valueArray) {
+            this.keyArray = keyArray;
+            this.valueArray = valueArray;
+        }
+
+        @Override
+        public int size() {
+            return keyArray.size();
+        }
+
+        @Override
+        public ArrayData keyArray() {
+            return keyArray;
+        }
+
+        @Override
+        public ArrayData valueArray() {
+            return valueArray;
+        }
     }
 }

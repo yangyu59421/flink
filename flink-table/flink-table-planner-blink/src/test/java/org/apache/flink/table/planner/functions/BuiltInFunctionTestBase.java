@@ -34,8 +34,10 @@ import org.apache.flink.table.types.AbstractDataType;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
+import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 
+import org.hamcrest.CoreMatchers;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -126,11 +128,15 @@ public abstract class BuiltInFunctionTestBase {
 
     private static void testTableApiError(Table inputTable, TableApiErrorTestItem testItem) {
         try {
-            // hasNext leads to call of eval which potentially could have runtime checks
+            // we are calling hasNext here to trigger runtime exceptions
             inputTable.select(testItem.expression).execute().collect().hasNext();
             fail("Error expected: " + testItem.errorMessage);
         } catch (Throwable t) {
-            assertThat(t, containsCause(new ValidationException(testItem.errorMessage)));
+            assertThat(
+                    t,
+                    CoreMatchers.anyOf(
+                            containsCause(new ValidationException(testItem.errorMessage)),
+                            containsCause(new FlinkRuntimeException(testItem.errorMessage))));
         }
     }
 
@@ -148,14 +154,18 @@ public abstract class BuiltInFunctionTestBase {
     private static void testSqlError(
             TableEnvironment env, Table inputTable, SqlErrorTestItem testItem) {
         try {
-            // hasNext leads to call of eval which potentially could have runtime checks
+            // we are calling hasNext here to trigger runtime exceptions
             env.sqlQuery("SELECT " + testItem.expression + " FROM " + inputTable)
                     .execute()
                     .collect()
                     .hasNext();
             fail("Error expected: " + testItem.errorMessage);
         } catch (Throwable t) {
-            assertThat(t, containsCause(new ValidationException(testItem.errorMessage)));
+            assertThat(
+                    t,
+                    CoreMatchers.anyOf(
+                            containsCause(new ValidationException(testItem.errorMessage)),
+                            containsCause(new FlinkRuntimeException(testItem.errorMessage))));
         }
     }
 

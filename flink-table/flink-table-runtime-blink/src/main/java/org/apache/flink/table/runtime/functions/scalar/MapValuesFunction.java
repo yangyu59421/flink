@@ -33,9 +33,7 @@ public class MapValuesFunction extends BuiltInScalarFunction {
         super(BuiltInFunctionDefinitions.MAP_VALUES, context);
     }
 
-    public @Nullable ArrayData eval(MapData input) {
-        // we rely on the casting functionality via input type strategy
-        // to determine the common data type
+    public @Nullable ArrayData eval(@Nullable MapData input) {
         if (input == null) {
             return null;
         }
