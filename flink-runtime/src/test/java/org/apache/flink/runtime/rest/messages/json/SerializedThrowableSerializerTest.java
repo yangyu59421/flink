@@ -50,6 +50,8 @@ public class SerializedThrowableSerializerTest extends TestLogger {
     public void testSerializationDeserialization() throws Exception {
         Exception cause = new Exception("cause");
         Exception root = new Exception("message", cause);
+        Exception suppressed = new Exception("suppressed");
+        root.addSuppressed(suppressed);
 
         final SerializedThrowable serializedThrowable = new SerializedThrowable(root);
 
@@ -63,5 +65,9 @@ public class SerializedThrowableSerializerTest extends TestLogger {
                 deserializedSerializedThrowable.getFullStringifiedStackTrace());
         assertEquals("cause", deserializedSerializedThrowable.getCause().getMessage());
         assertTrue(deserializedSerializedThrowable.getCause() instanceof SerializedThrowable);
+        assertEquals(1, deserializedSerializedThrowable.getSuppressed().length);
+        assertEquals("suppressed", deserializedSerializedThrowable.getSuppressed()[0].getMessage());
+        assertTrue(
+                deserializedSerializedThrowable.getSuppressed()[0] instanceof SerializedThrowable);
     }
 }
