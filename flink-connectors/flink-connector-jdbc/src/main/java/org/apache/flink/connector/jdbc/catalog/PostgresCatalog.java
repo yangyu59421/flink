@@ -203,7 +203,8 @@ public class PostgresCatalog extends AbstractJdbcCatalog {
                     getPrimaryKey(metaData, pgPath.getPgSchemaName(), pgPath.getPgTableName());
 
             PreparedStatement ps =
-                    conn.prepareStatement(String.format("SELECT * FROM %s;", pgPath.getFullPath()));
+                    conn.prepareStatement(
+                            String.format("SELECT * FROM %s;", pgPath.getQuoteFullPath()));
 
             ResultSetMetaData rsmd = ps.getMetaData();
 
