@@ -349,7 +349,7 @@ public class KafkaDynamicTableFactory
             Properties properties,
             FlinkKafkaPartitioner<RowData> partitioner,
             KafkaSinkSemantic semantic,
-            Integer parallelism) {
+            @Nullable Integer parallelism) {
         return new KafkaDynamicSink(
                 physicalDataType,
                 physicalDataType,
