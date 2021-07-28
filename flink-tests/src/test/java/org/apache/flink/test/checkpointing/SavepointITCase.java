@@ -795,7 +795,7 @@ public class SavepointITCase extends TestLogger {
         }
 
         @Override
-        public void addCheckpoint(
+        public CompletedCheckpoint addCheckpointAndSubsumeOldestOne(
                 CompletedCheckpoint checkpoint,
                 CheckpointsCleaner checkpointsCleaner,
                 Runnable postCleanup)
@@ -803,7 +803,8 @@ public class SavepointITCase extends TestLogger {
             if (checkpoint.getProperties().isSynchronous()) {
                 throw new ExpectedTestException();
             } else {
-                super.addCheckpoint(checkpoint, checkpointsCleaner, postCleanup);
+                return super.addCheckpointAndSubsumeOldestOne(
+                        checkpoint, checkpointsCleaner, postCleanup);
             }
         }
     }

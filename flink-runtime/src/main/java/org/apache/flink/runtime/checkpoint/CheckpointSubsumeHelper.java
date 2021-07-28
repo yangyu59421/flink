@@ -46,18 +46,24 @@ import java.util.Optional;
 class CheckpointSubsumeHelper {
     private static final Logger LOG = LoggerFactory.getLogger(CheckpointSubsumeHelper.class);
 
-    public static void subsume(
+    public static Optional<CompletedCheckpoint> subsume(
             Deque<CompletedCheckpoint> checkpoints, int numRetain, SubsumeAction subsumeAction)
             throws Exception {
         if (checkpoints.isEmpty() || checkpoints.size() <= numRetain) {
-            return;
+            return Optional.empty();
         }
         CompletedCheckpoint latest = checkpoints.peekLast();
+        CompletedCheckpoint lastSubsumedCheckpoint = null;
         Optional<CompletedCheckpoint> latestNotSavepoint = getLatestNotSavepoint(checkpoints);
         Iterator<CompletedCheckpoint> iterator = checkpoints.iterator();
         while (checkpoints.size() > numRetain && iterator.hasNext()) {
             CompletedCheckpoint next = iterator.next();
             if (canSubsume(next, latest, latestNotSavepoint)) {
+                // always return the subsumed checkpoint with larger checkpoint id.
+                if (lastSubsumedCheckpoint == null
+                        || next.getCheckpointID() > lastSubsumedCheckpoint.getCheckpointID()) {
+                    lastSubsumedCheckpoint = next;
+                }
                 iterator.remove();
                 try {
                     subsumeAction.subsume(next);
@@ -67,6 +73,9 @@ class CheckpointSubsumeHelper {
             }
             // Don't break out from the loop to subsume intermediate savepoints
         }
+        return lastSubsumedCheckpoint == null
+                ? Optional.empty()
+                : Optional.of(lastSubsumedCheckpoint);
     }
 
     private static Optional<CompletedCheckpoint> getLatestNotSavepoint(
