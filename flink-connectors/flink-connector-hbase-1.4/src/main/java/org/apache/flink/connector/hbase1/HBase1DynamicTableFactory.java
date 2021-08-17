@@ -46,6 +46,7 @@ import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.SINK_
 import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.SINK_BUFFER_FLUSH_MAX_ROWS;
 import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.SINK_BUFFER_FLUSH_MAX_SIZE;
 import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.SINK_PARALLELISM;
+import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.SINK_SKIP_WAL;
 import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.TABLE_NAME;
 import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.ZOOKEEPER_QUORUM;
 import static org.apache.flink.connector.hbase.table.HBaseConnectorOptions.ZOOKEEPER_ZNODE_PARENT;
@@ -132,6 +133,7 @@ public class HBase1DynamicTableFactory
         set.add(SINK_BUFFER_FLUSH_MAX_ROWS);
         set.add(SINK_BUFFER_FLUSH_INTERVAL);
         set.add(SINK_PARALLELISM);
+        set.add(SINK_SKIP_WAL);
         set.add(LOOKUP_CACHE_MAX_ROWS);
         set.add(LOOKUP_CACHE_TTL);
         set.add(LOOKUP_MAX_RETRIES);
