@@ -18,16 +18,18 @@
 */
 
 /**
- * Function to synchronize all tabs on a page to a given user selection. 
- * 
- * The selection of a tab group should only change if it contains an 
+ * Function to synchronize all tabs on a page to a given user selection.
+ *
+ * The selection of a tab group should only change if it contains an
  * input with the given tabId. Otherwise, its current seletion should
  * remain unchanged.
- * 
+ *
  * See layouts/shortcodes/tabs.html
  */
-function onSwitch(tabId) {
+function onSwitch(tabId, group, index) {
     var selectorForId = "[data-tab-group='flink-tabs'][data-tab-item='" + tabId + "']";
+    var clickedTab = document.getElementById(group + "-" + index);
+    var clickedTabClientOffsetY = clickedTab.getBoundingClientRect().y;
 
     Array
         // find all tab group elements on the page
@@ -48,6 +50,11 @@ function onSwitch(tabId) {
                 input.removeAttribute("checked")
             }
         });
+
+    window.scrollTo({
+        top: clickedTab.offsetTop - clickedTabClientOffsetY + 84,
+        behavior: "instant"
+    });
 }
 
 /**
