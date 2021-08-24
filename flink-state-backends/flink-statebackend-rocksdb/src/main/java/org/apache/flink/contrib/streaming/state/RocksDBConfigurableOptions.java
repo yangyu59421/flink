@@ -30,11 +30,12 @@ import java.io.Serializable;
 import static org.apache.flink.configuration.ConfigOptions.key;
 import static org.apache.flink.configuration.description.LinkElement.link;
 import static org.apache.flink.configuration.description.TextElement.code;
+import static org.apache.flink.configuration.description.TextElement.text;
 import static org.rocksdb.CompactionStyle.FIFO;
 import static org.rocksdb.CompactionStyle.LEVEL;
 import static org.rocksdb.CompactionStyle.NONE;
 import static org.rocksdb.CompactionStyle.UNIVERSAL;
-import static org.rocksdb.InfoLogLevel.HEADER_LEVEL;
+import static org.rocksdb.InfoLogLevel.INFO_LEVEL;
 
 /**
  * This class contains the configuration options for the {@link DefaultConfigurableOptionsFactory}.
@@ -102,13 +103,22 @@ public class RocksDBConfigurableOptions implements Serializable {
                                     .text(
                                             "The specified information logging level for RocksDB. "
                                                     + "If unset, Flink will use %s.",
-                                            code(HEADER_LEVEL.name()))
+                                            code(INFO_LEVEL.name()))
                                     .linebreak()
                                     .text(
                                             "Note: RocksDB info logs will not be written to the TaskManager logs and there "
-                                                    + "is no rolling strategy, unless you configure %s, %s, and %s accordingly. "
+                                                    + "is a rolling strategy of keeping %s files with %s bytes per file, and you could "
+                                                    + "configure %s, %s, and %s accordingly to change this. "
                                                     + "Without a rolling strategy, long-running tasks may lead to uncontrolled "
                                                     + "disk space usage if configured with increased log levels!",
+                                            text(
+                                                    String.valueOf(
+                                                            PredefinedOptions
+                                                                    .DEFAULT_LOG_FILE_NUM)),
+                                            text(
+                                                    String.valueOf(
+                                                            PredefinedOptions
+                                                                    .DEFAULT_LOG_FILE_SIZE)),
                                             code(LOG_DIR.key()),
                                             code(LOG_MAX_FILE_SIZE.key()),
                                             code(LOG_FILE_NUM.key()))

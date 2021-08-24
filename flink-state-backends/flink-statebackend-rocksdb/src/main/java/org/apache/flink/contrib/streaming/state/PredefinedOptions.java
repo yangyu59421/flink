@@ -61,7 +61,9 @@ public enum PredefinedOptions {
         public DBOptions createDBOptions(Collection<AutoCloseable> handlesToClose) {
             return new DBOptions()
                     .setUseFsync(false)
-                    .setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+                    .setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+                    .setMaxLogFileSize(DEFAULT_LOG_FILE_SIZE)
+                    .setKeepLogFileNum(DEFAULT_LOG_FILE_NUM)
                     .setStatsDumpPeriodSec(0);
         }
 
@@ -101,7 +103,9 @@ public enum PredefinedOptions {
                     .setIncreaseParallelism(4)
                     .setUseFsync(false)
                     .setMaxOpenFiles(-1)
-                    .setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+                    .setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+                    .setMaxLogFileSize(DEFAULT_LOG_FILE_SIZE)
+                    .setKeepLogFileNum(DEFAULT_LOG_FILE_NUM)
                     .setStatsDumpPeriodSec(0);
         }
 
@@ -150,7 +154,9 @@ public enum PredefinedOptions {
                     .setIncreaseParallelism(4)
                     .setUseFsync(false)
                     .setMaxOpenFiles(-1)
-                    .setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+                    .setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+                    .setMaxLogFileSize(DEFAULT_LOG_FILE_SIZE)
+                    .setKeepLogFileNum(DEFAULT_LOG_FILE_NUM)
                     .setStatsDumpPeriodSec(0);
         }
 
@@ -209,7 +215,9 @@ public enum PredefinedOptions {
                     .setIncreaseParallelism(4)
                     .setUseFsync(false)
                     .setMaxOpenFiles(-1)
-                    .setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+                    .setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+                    .setMaxLogFileSize(DEFAULT_LOG_FILE_SIZE)
+                    .setKeepLogFileNum(DEFAULT_LOG_FILE_NUM)
                     .setStatsDumpPeriodSec(0);
         }
 
@@ -220,6 +228,9 @@ public enum PredefinedOptions {
     };
 
     // ------------------------------------------------------------------------
+
+    public static final long DEFAULT_LOG_FILE_SIZE = 10 * 1024 * 1024L;
+    public static final int DEFAULT_LOG_FILE_NUM = 10;
 
     /**
      * Creates the {@link DBOptions}for this pre-defined setting.
