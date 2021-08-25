@@ -51,7 +51,9 @@ public enum PredefinedOptions {
      *
      * <ul>
      *   <li>setUseFsync(false)
-     *   <li>setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+     *   <li>setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+     *   <li>setMaxLogFileSize(10 MBytes)
+     *   <li>setKeepLogFileNum(10)
      *   <li>setStatsDumpPeriodSec(0)
      * </ul>
      */
@@ -88,7 +90,9 @@ public enum PredefinedOptions {
      *   <li>setUseFsync(false)
      *   <li>setDisableDataSync(true)
      *   <li>setMaxOpenFiles(-1)
-     *   <li>setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+     *   <li>setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+     *   <li>setMaxLogFileSize(10 MBytes)
+     *   <li>setKeepLogFileNum(10)
      *   <li>setStatsDumpPeriodSec(0)
      * </ul>
      *
@@ -137,7 +141,9 @@ public enum PredefinedOptions {
      *   <li>setMaxWriteBufferNumber(4)
      *   <li>setUseFsync(false)
      *   <li>setMaxOpenFiles(-1)
-     *   <li>setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+     *   <li>setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+     *   <li>setMaxLogFileSize(10 MBytes)
+     *   <li>setKeepLogFileNum(10)
      *   <li>setStatsDumpPeriodSec(0)
      *   <li>BlockBasedTableConfig.setBlockCacheSize(256 MBytes)
      *   <li>BlockBasedTableConfigsetBlockSize(128 KBytes)
@@ -200,7 +206,9 @@ public enum PredefinedOptions {
      *   <li>setUseFsync(false)
      *   <li>setDisableDataSync(true)
      *   <li>setMaxOpenFiles(-1)
-     *   <li>setInfoLogLevel(InfoLogLevel.HEADER_LEVEL)
+     *   <li>setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+     *   <li>setMaxLogFileSize(10 MBytes)
+     *   <li>setKeepLogFileNum(10)
      *   <li>setStatsDumpPeriodSec(0)
      * </ul>
      *
