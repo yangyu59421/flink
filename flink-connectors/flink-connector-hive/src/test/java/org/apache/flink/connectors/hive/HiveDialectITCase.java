@@ -357,6 +357,14 @@ public class HiveDialectITCase {
         assertEquals(
                 "[+I[1, 0, static], +I[1, 1, a], +I[1, 2, b], +I[1, 3, c], +I[2, 0, static], +I[2, 1, b], +I[3, 0, static], +I[3, 1, c]]",
                 results.toString());
+        tableEnv.executeSql(
+                        "insert overwrite table default.dest2 partition (p1=1,p2='static') if not exists select x from src")
+                .await();
+        results = queryResult(tableEnv.sqlQuery("select * from dest2 order by x,p1,p2"));
+        assertEquals(
+                "[+I[1, 0, static], +I[1, 1, a], +I[1, 1, static], +I[1, 2, b], +I[1, 3, c], +I[2, 0, static],"
+                        + " +I[2, 1, b], +I[2, 1, static], +I[3, 0, static], +I[3, 1, c], +I[3, 1, static]]",
+                results.toString());
     }
 
     @Test
