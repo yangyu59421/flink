@@ -332,7 +332,7 @@ dataStream.union(otherStream1, otherStream2, ...);
 {{< /tab >}}
 {{< tab "Scala" >}}
 ```scala
-dataStream.union(otherStream1, otherStream2, ...);
+dataStream.union(otherStream1, otherStream2, ...)
 ```
 {{< /tab >}}
 {{< tab "Python" >}}
