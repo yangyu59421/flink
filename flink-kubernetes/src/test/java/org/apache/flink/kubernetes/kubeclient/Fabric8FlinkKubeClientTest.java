@@ -80,6 +80,7 @@ public class Fabric8FlinkKubeClientTest extends KubernetesClientTestBase {
     private static final int BLOB_SERVER_PORT = 8346;
 
     private static final double JOB_MANAGER_CPU = 2.0;
+    private static final double JOB_MANAGER_CPU_LIMIT_FACTOR = 1.5;
     private static final int JOB_MANAGER_MEMORY = 768;
 
     private static final String SERVICE_ACCOUNT_NAME = "service-test";
@@ -116,6 +117,8 @@ public class Fabric8FlinkKubeClientTest extends KubernetesClientTestBase {
         flinkConfig.set(JobManagerOptions.PORT, RPC_PORT);
         flinkConfig.set(BlobServerOptions.PORT, Integer.toString(BLOB_SERVER_PORT));
         flinkConfig.set(KubernetesConfigOptions.JOB_MANAGER_CPU, JOB_MANAGER_CPU);
+        flinkConfig.set(
+                KubernetesConfigOptions.JOB_MANAGER_CPU_LIMIT_FACTOR, JOB_MANAGER_CPU_LIMIT_FACTOR);
         flinkConfig.set(KubernetesConfigOptions.JOB_MANAGER_SERVICE_ACCOUNT, SERVICE_ACCOUNT_NAME);
     }
 

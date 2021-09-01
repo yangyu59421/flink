@@ -319,9 +319,11 @@ public class KubernetesUtils {
             ResourceRequirements resourceRequirements,
             int mem,
             double cpu,
+            double cpuLimitFactor,
             Map<String, ExternalResource> externalResources,
             Map<String, String> externalResourceConfigKeys) {
         final Quantity cpuQuantity = new Quantity(String.valueOf(cpu));
+        final Quantity cpuLimitQuantity = new Quantity(String.valueOf(cpu * cpuLimitFactor));
         final Quantity memQuantity = new Quantity(mem + Constants.RESOURCE_UNIT_MB);
 
         ResourceRequirementsBuilder resourceRequirementsBuilder =
@@ -329,7 +331,7 @@ public class KubernetesUtils {
                         .addToRequests(Constants.RESOURCE_NAME_MEMORY, memQuantity)
                         .addToRequests(Constants.RESOURCE_NAME_CPU, cpuQuantity)
                         .addToLimits(Constants.RESOURCE_NAME_MEMORY, memQuantity)
-                        .addToLimits(Constants.RESOURCE_NAME_CPU, cpuQuantity);
+                        .addToLimits(Constants.RESOURCE_NAME_CPU, cpuLimitQuantity);
 
         // Add the external resources to resource requirement.
         for (Map.Entry<String, ExternalResource> externalResource : externalResources.entrySet()) {

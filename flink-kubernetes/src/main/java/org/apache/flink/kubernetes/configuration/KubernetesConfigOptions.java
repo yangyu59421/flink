@@ -141,6 +141,14 @@ public class KubernetesConfigOptions {
                     .defaultValue(1.0)
                     .withDescription("The number of cpu used by job manager");
 
+    public static final ConfigOption<Double> JOB_MANAGER_CPU_LIMIT_FACTOR =
+            key("kubernetes.jobmanager.cpu.limit-factor")
+                    .doubleType()
+                    .defaultValue(1.0)
+                    .withDescription(
+                            "The limit factor of cpu used by job manager. "
+                                    + "The resources limit cpu will be set to cpu * limit-factor.");
+
     public static final ConfigOption<Double> TASK_MANAGER_CPU =
             key("kubernetes.taskmanager.cpu")
                     .doubleType()
@@ -148,6 +156,14 @@ public class KubernetesConfigOptions {
                     .withDescription(
                             "The number of cpu used by task manager. By default, the cpu is set "
                                     + "to the number of slots per TaskManager");
+
+    public static final ConfigOption<Double> TASK_MANAGER_CPU_LIMIT_FACTOR =
+            key("kubernetes.taskmanager.cpu.limit-factor")
+                    .doubleType()
+                    .defaultValue(1.0)
+                    .withDescription(
+                            "The limit factor of cpu used by task manager. "
+                                    + "The resources limit cpu will be set to cpu * limit-factor.");
 
     public static final ConfigOption<ImagePullPolicy> CONTAINER_IMAGE_PULL_POLICY =
             key("kubernetes.container.image.pull-policy")

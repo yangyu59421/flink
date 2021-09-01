@@ -114,6 +114,7 @@ public class InitTaskManagerDecorator extends AbstractKubernetesStepDecorator {
                         requirementsInPodTemplate,
                         kubernetesTaskManagerParameters.getTaskManagerMemoryMB(),
                         kubernetesTaskManagerParameters.getTaskManagerCPU(),
+                        kubernetesTaskManagerParameters.getTaskManagerCPULimitFactor(),
                         kubernetesTaskManagerParameters.getTaskManagerExternalResources(),
                         kubernetesTaskManagerParameters.getTaskManagerExternalResourceConfigKeys());
         final String image =
