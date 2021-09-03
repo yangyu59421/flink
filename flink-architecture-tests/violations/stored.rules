@@ -1,0 +1,8 @@
+#
+#Sun Nov 21 16:44:27 CET 2021
+Return\ and\ argument\ types\ of\ methods\ annotated\ with\ @Public\ must\ be\ annotated\ with\ @Public,\ too.=52369cb7-a925-41d1-a9cb-026003d17f02
+Return\ and\ argument\ types\ of\ methods\ annotated\ with\ @Public(Evolving)\ must\ be\ annotated\ with\ @Public(Evolving),\ too.=98724389-09bd-4ec8-833d-95f033f902df
+Options\ for\ connectors\ and\ formats\ should\ reside\ in\ a\ consistent\ package\ and\ be\ public\ API.=46914ec9-fa27-440f-bd7e-c3ad840a3428
+Production\ code\ must\ not\ call\ methods\ annotated\ with\ @VisibleForTesting=fdb7ee81-34ce-40f6-b840-e421d0840446
+fields\ that\ are\ public,\ static,\ and\ of\ type\ ConfigOption\ and\ are\ declared\ in\ classes\ that\ are\ Java\ classes\ and\ reside\ in\ a\ package\ 'org.apache.flink.table..'\ should\ be\ declared\ in\ classes\ that\ have\ simple\ name\ ending\ with\ 'Options'\ or\ should\ be\ declared\ in\ org.apache.flink.table.factories.FactoryUtil=c4d034a4-db96-4bde-a9fd-281fcb38478c
+Classes\ in\ API\ packages\ should\ have\ at\ least\ one\ API\ visibility\ annotation.=830e8b99-b5ca-4707-be96-9742fb261bae
