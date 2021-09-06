@@ -33,6 +33,7 @@ public class KubernetesJobManagerTestBase extends KubernetesPodTestBase {
     protected static final double JOB_MANAGER_CPU = 2.0;
     protected static final double JOB_MANAGER_CPU_LIMIT_FACTOR = 1.5;
     protected static final int JOB_MANAGER_MEMORY = 768;
+    protected static final double JOB_MANAGER_MEMORY_LIMIT_FACTOR = 2;
 
     protected static final int REST_PORT = 9081;
     protected static final String REST_BIND_PORT = "9082";
@@ -52,6 +53,9 @@ public class KubernetesJobManagerTestBase extends KubernetesPodTestBase {
         this.flinkConfig.set(KubernetesConfigOptions.JOB_MANAGER_CPU, JOB_MANAGER_CPU);
         this.flinkConfig.set(
                 KubernetesConfigOptions.JOB_MANAGER_CPU_LIMIT_FACTOR, JOB_MANAGER_CPU_LIMIT_FACTOR);
+        this.flinkConfig.set(
+                KubernetesConfigOptions.JOB_MANAGER_MEMORY_LIMIT_FACTOR,
+                JOB_MANAGER_MEMORY_LIMIT_FACTOR);
         this.customizedEnvs.forEach(
                 (k, v) ->
                         this.flinkConfig.setString(

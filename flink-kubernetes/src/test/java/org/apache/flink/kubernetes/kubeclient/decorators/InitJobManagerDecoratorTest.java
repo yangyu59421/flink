@@ -124,7 +124,9 @@ public class InitJobManagerDecoratorTest extends KubernetesJobManagerTestBase {
         assertEquals(
                 Double.toString(JOB_MANAGER_CPU * JOB_MANAGER_CPU_LIMIT_FACTOR),
                 limits.get("cpu").getAmount());
-        assertEquals(String.valueOf(JOB_MANAGER_MEMORY), limits.get("memory").getAmount());
+        assertEquals(
+                Integer.toString((int) (JOB_MANAGER_MEMORY * JOB_MANAGER_MEMORY_LIMIT_FACTOR)),
+                limits.get("memory").getAmount());
     }
 
     @Test

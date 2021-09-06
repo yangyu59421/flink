@@ -146,7 +146,9 @@ public class InitTaskManagerDecoratorTest extends KubernetesTaskManagerTestBase 
         assertEquals(
                 Double.toString(TASK_MANAGER_CPU * TASK_MANAGER_CPU_LIMIT_FACTOR),
                 limits.get("cpu").getAmount());
-        assertEquals(String.valueOf(TOTAL_PROCESS_MEMORY), limits.get("memory").getAmount());
+        assertEquals(
+                Integer.toString((int) (TOTAL_PROCESS_MEMORY * TASK_MANAGER_MEMORY_LIMIT_FACTOR)),
+                limits.get("memory").getAmount());
     }
 
     @Test

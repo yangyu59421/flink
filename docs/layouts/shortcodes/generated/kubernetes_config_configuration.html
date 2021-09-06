@@ -111,6 +111,12 @@
             <td>The labels to be set for JobManager pod. Specified as key:value pairs separated by commas. For example, version:alphav1,deploy:test.</td>
         </tr>
         <tr>
+            <td><h5>kubernetes.jobmanager.memory.limit-factor</h5></td>
+            <td style="word-wrap: break-word;">1.0</td>
+            <td>Double</td>
+            <td>The limit factor of memory used by job manager. The resources limit memory will be set to memory * limit-factor.</td>
+        </tr>
+        <tr>
             <td><h5>kubernetes.jobmanager.node-selector</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
             <td>Map</td>
@@ -217,6 +223,12 @@
             <td style="word-wrap: break-word;">(none)</td>
             <td>Map</td>
             <td>The labels to be set for TaskManager pods. Specified as key:value pairs separated by commas. For example, version:alphav1,deploy:test.</td>
+        </tr>
+        <tr>
+            <td><h5>kubernetes.taskmanager.memory.limit-factor</h5></td>
+            <td style="word-wrap: break-word;">1.0</td>
+            <td>Double</td>
+            <td>The limit factor of memory used by task manager. The resources limit memory will be set to memory * limit-factor.</td>
         </tr>
         <tr>
             <td><h5>kubernetes.taskmanager.node-selector</h5></td>

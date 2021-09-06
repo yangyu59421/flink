@@ -46,6 +46,7 @@ public class KubernetesTaskManagerParametersTest extends KubernetesTestBase {
     private static final int TASK_MANAGER_MEMORY = 1024;
     private static final double TASK_MANAGER_CPU = 1.2;
     private static final double TASK_MANAGER_CPU_LIMIT_FACTOR = 2.0;
+    private static final double TASK_MANAGER_MEMORY_LIMIT_FACTOR = 2.0;
     private static final int RPC_PORT = 13001;
 
     private static final String POD_NAME = "task-manager-pod-1";
@@ -74,6 +75,9 @@ public class KubernetesTaskManagerParametersTest extends KubernetesTestBase {
         flinkConfig.set(
                 KubernetesConfigOptions.TASK_MANAGER_CPU_LIMIT_FACTOR,
                 TASK_MANAGER_CPU_LIMIT_FACTOR);
+        flinkConfig.set(
+                KubernetesConfigOptions.TASK_MANAGER_MEMORY_LIMIT_FACTOR,
+                TASK_MANAGER_MEMORY_LIMIT_FACTOR);
 
         customizedEnvs.forEach(
                 (k, v) ->
@@ -148,6 +152,14 @@ public class KubernetesTaskManagerParametersTest extends KubernetesTestBase {
         assertEquals(
                 TASK_MANAGER_CPU_LIMIT_FACTOR,
                 kubernetesTaskManagerParameters.getTaskManagerCPULimitFactor(),
+                0.000000000001);
+    }
+
+    @Test
+    public void testGetTaskManagerMemoryLimitFactor() {
+        assertEquals(
+                TASK_MANAGER_MEMORY_LIMIT_FACTOR,
+                kubernetesTaskManagerParameters.getTaskManagerMemoryLimitFactor(),
                 0.000000000001);
     }
 
