@@ -160,18 +160,8 @@ public class AbstractMetricGroupTest extends TestLogger {
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
                         + "test1."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter1.class.getName());
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test1."
                         + ConfigConstants.METRICS_REPORTER_SCOPE_DELIMITER,
                 "-");
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test2."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter2.class.getName());
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
                         + "test2."

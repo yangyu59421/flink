@@ -216,18 +216,6 @@ public class MetricRegistryImplTest extends TestLogger {
     /** Verifies that reporters are notified of added/removed metrics. */
     @Test
     public void testReporterNotifications() throws Exception {
-        Configuration config = new Configuration();
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test1."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter6.class.getName());
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test2."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter7.class.getName());
-
         MetricRegistryImpl registry =
                 new MetricRegistryImpl(
                         MetricRegistryTestUtils.defaultMetricRegistryConfiguration(),
@@ -392,34 +380,14 @@ public class MetricRegistryImplTest extends TestLogger {
                 "_");
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test1."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter8.class.getName());
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
                         + "test2."
                         + ConfigConstants.METRICS_REPORTER_SCOPE_DELIMITER,
                 "-");
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test2."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter8.class.getName());
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
                         + "test3."
                         + ConfigConstants.METRICS_REPORTER_SCOPE_DELIMITER,
                 "AA");
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test3."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter8.class.getName());
-        config.setString(
-                ConfigConstants.METRICS_REPORTER_PREFIX
-                        + "test4."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                TestReporter8.class.getName());
 
         MetricRegistryImpl registry =
                 new MetricRegistryImpl(

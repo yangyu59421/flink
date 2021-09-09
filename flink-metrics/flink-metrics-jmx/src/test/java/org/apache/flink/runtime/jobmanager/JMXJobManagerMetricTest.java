@@ -26,7 +26,7 @@ import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.core.testutils.OneShotLatch;
-import org.apache.flink.metrics.jmx.JMXReporter;
+import org.apache.flink.metrics.jmx.JMXReporterFactory;
 import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -73,8 +73,8 @@ public class JMXJobManagerMetricTest extends TestLogger {
         flinkConfiguration.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
                         + "test."
-                        + ConfigConstants.METRICS_REPORTER_CLASS_SUFFIX,
-                JMXReporter.class.getName());
+                        + ConfigConstants.METRICS_REPORTER_FACTORY_CLASS_SUFFIX,
+                JMXReporterFactory.class.getName());
         flinkConfiguration.setString(MetricOptions.SCOPE_NAMING_JM_JOB, "jobmanager.<job_name>");
 
         return flinkConfiguration;
