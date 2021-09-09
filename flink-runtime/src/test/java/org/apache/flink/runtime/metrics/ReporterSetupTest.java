@@ -31,8 +31,7 @@ import org.apache.flink.runtime.metrics.scope.ScopeFormat;
 import org.apache.flink.runtime.metrics.util.TestReporter;
 import org.apache.flink.util.TestLogger;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -43,8 +42,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsMapContaining.hasEntry;
 import static org.hamcrest.core.IsCollectionContaining.hasItems;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Tests for the {@link ReporterSetup}. */
 public class ReporterSetupTest extends TestLogger {
@@ -57,14 +56,14 @@ public class ReporterSetupTest extends TestLogger {
 
     /** Verifies that a reporter can be configured with all it's arguments being forwarded. */
     @Test
-    public void testReporterArgumentForwarding() {
+    void testReporterArgumentForwarding() {
         final Configuration config = new Configuration();
 
         configureReporter1(config);
 
         final List<ReporterSetup> reporterSetups = ReporterSetup.fromConfiguration(config, null);
 
-        Assert.assertEquals(1, reporterSetups.size());
+        assertEquals(1, reporterSetups.size());
 
         final ReporterSetup reporterSetup = reporterSetups.get(0);
         assertReporter1Configured(reporterSetup);
@@ -74,7 +73,7 @@ public class ReporterSetupTest extends TestLogger {
      * Verifies that multiple reporters can be configured with all their arguments being forwarded.
      */
     @Test
-    public void testSeveralReportersWithArgumentForwarding() {
+    void testSeveralReportersWithArgumentForwarding() {
         final Configuration config = new Configuration();
 
         configureReporter1(config);
@@ -82,18 +81,18 @@ public class ReporterSetupTest extends TestLogger {
 
         final List<ReporterSetup> reporterSetups = ReporterSetup.fromConfiguration(config, null);
 
-        Assert.assertEquals(2, reporterSetups.size());
+        assertEquals(2, reporterSetups.size());
 
         final Optional<ReporterSetup> reporter1Config =
                 reporterSetups.stream().filter(c -> "reporter1".equals(c.getName())).findFirst();
 
-        Assert.assertTrue(reporter1Config.isPresent());
+        assertTrue(reporter1Config.isPresent());
         assertReporter1Configured(reporter1Config.get());
 
         final Optional<ReporterSetup> reporter2Config =
                 reporterSetups.stream().filter(c -> "reporter2".equals(c.getName())).findFirst();
 
-        Assert.assertTrue(reporter2Config.isPresent());
+        assertTrue(reporter2Config.isPresent());
         assertReporter2Configured(reporter2Config.get());
     }
 
@@ -102,7 +101,7 @@ public class ReporterSetupTest extends TestLogger {
      * reporters.
      */
     @Test
-    public void testActivateOneReporterAmongTwoDeclared() {
+    void testActivateOneReporterAmongTwoDeclared() {
         final Configuration config = new Configuration();
 
         configureReporter1(config);
@@ -112,14 +111,14 @@ public class ReporterSetupTest extends TestLogger {
 
         final List<ReporterSetup> reporterSetups = ReporterSetup.fromConfiguration(config, null);
 
-        Assert.assertEquals(1, reporterSetups.size());
+        assertEquals(1, reporterSetups.size());
 
         final ReporterSetup setup = reporterSetups.get(0);
         assertReporter2Configured(setup);
     }
 
     @Test
-    public void testReporterSetupSupplier() throws Exception {
+    void testReporterSetupSupplier() throws Exception {
         final Configuration config = new Configuration();
 
         config.setString(
@@ -130,16 +129,16 @@ public class ReporterSetupTest extends TestLogger {
 
         final List<ReporterSetup> reporterSetups = ReporterSetup.fromConfiguration(config, null);
 
-        Assert.assertEquals(1, reporterSetups.size());
+        assertEquals(1, reporterSetups.size());
 
         final ReporterSetup reporterSetup = reporterSetups.get(0);
         final MetricReporter metricReporter = reporterSetup.getReporter();
-        Assert.assertThat(metricReporter, instanceOf(TestReporter1.class));
+        assertThat(metricReporter, instanceOf(TestReporter1.class));
     }
 
     /** Verifies that multiple reporters are instantiated correctly. */
     @Test
-    public void testMultipleReporterInstantiation() throws Exception {
+    void testMultipleReporterInstantiation() throws Exception {
         Configuration config = new Configuration();
 
         config.setString(
@@ -162,9 +161,9 @@ public class ReporterSetupTest extends TestLogger {
 
         assertEquals(3, reporterSetups.size());
 
-        Assert.assertTrue(TestReporter11.wasOpened);
-        Assert.assertTrue(TestReporter12.wasOpened);
-        Assert.assertTrue(TestReporter13.wasOpened);
+        assertTrue(TestReporter11.wasOpened);
+        assertTrue(TestReporter12.wasOpened);
+        assertTrue(TestReporter13.wasOpened);
     }
 
     /** Reporter that exposes whether open() was called. */
@@ -208,10 +207,10 @@ public class ReporterSetupTest extends TestLogger {
     }
 
     private static void assertReporter1Configured(ReporterSetup setup) {
-        Assert.assertEquals("reporter1", setup.getName());
-        Assert.assertEquals("value1", setup.getConfiguration().getString("arg1", ""));
-        Assert.assertEquals("value2", setup.getConfiguration().getString("arg2", ""));
-        Assert.assertEquals(
+        assertEquals("reporter1", setup.getName());
+        assertEquals("value1", setup.getConfiguration().getString("arg1", ""));
+        assertEquals("value2", setup.getConfiguration().getString("arg2", ""));
+        assertEquals(
                 ReporterSetupTest.TestReporter1.class.getName(),
                 setup.getConfiguration().getString("class", null));
     }
@@ -227,15 +226,15 @@ public class ReporterSetupTest extends TestLogger {
     }
 
     private static void assertReporter2Configured(ReporterSetup setup) {
-        Assert.assertEquals("reporter2", setup.getName());
-        Assert.assertEquals("value1", setup.getConfiguration().getString("arg1", null));
-        Assert.assertEquals("value3", setup.getConfiguration().getString("arg3", null));
-        Assert.assertEquals(
+        assertEquals("reporter2", setup.getName());
+        assertEquals("value1", setup.getConfiguration().getString("arg1", null));
+        assertEquals("value3", setup.getConfiguration().getString("arg3", null));
+        assertEquals(
                 TestReporter2.class.getName(), setup.getConfiguration().getString("class", null));
     }
 
     @Test
-    public void testVariableExclusionParsing() throws Exception {
+    void testVariableExclusionParsing() throws Exception {
         final String excludedVariable1 = "foo";
         final String excludedVariable2 = "foo";
         final Configuration config = new Configuration();
@@ -265,7 +264,7 @@ public class ReporterSetupTest extends TestLogger {
 
     /** Verifies that a factory configuration is correctly parsed. */
     @Test
-    public void testFactoryParsing() throws Exception {
+    void testFactoryParsing() throws Exception {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -287,7 +286,7 @@ public class ReporterSetupTest extends TestLogger {
      * are configured.
      */
     @Test
-    public void testFactoryPrioritization() throws Exception {
+    void testFactoryPrioritization() throws Exception {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -313,7 +312,7 @@ public class ReporterSetupTest extends TestLogger {
 
     /** Verifies that an error thrown by a factory does not affect the setup of other reporters. */
     @Test
-    public void testFactoryFailureIsolation() throws Exception {
+    void testFactoryFailureIsolation() throws Exception {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -333,7 +332,7 @@ public class ReporterSetupTest extends TestLogger {
 
     /** Verifies that factory/reflection approaches can be mixed freely. */
     @Test
-    public void testMixedSetupsFactoryParsing() throws Exception {
+    void testMixedSetupsFactoryParsing() throws Exception {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -362,7 +361,7 @@ public class ReporterSetupTest extends TestLogger {
     }
 
     @Test
-    public void testFactoryArgumentForwarding() throws Exception {
+    void testFactoryArgumentForwarding() throws Exception {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -382,7 +381,7 @@ public class ReporterSetupTest extends TestLogger {
      * InstantiateViaFactory}.
      */
     @Test
-    public void testFactoryAnnotation() {
+    void testFactoryAnnotation() {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -406,7 +405,7 @@ public class ReporterSetupTest extends TestLogger {
      * org.apache.flink.metrics.reporter.InterceptInstantiationViaReflection}.
      */
     @Test
-    public void testReflectionInterception() {
+    void testReflectionInterception() {
         final Configuration config = new Configuration();
         config.setString(
                 ConfigConstants.METRICS_REPORTER_PREFIX
@@ -434,7 +433,7 @@ public class ReporterSetupTest extends TestLogger {
     }
 
     @Test
-    public void testAdditionalVariablesParsing() {
+    void testAdditionalVariablesParsing() {
         final String tag1 = "foo";
         final String tagValue1 = "bar";
         final String tag2 = "fizz";
