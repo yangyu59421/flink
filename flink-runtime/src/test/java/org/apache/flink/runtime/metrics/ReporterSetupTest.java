@@ -29,9 +29,12 @@ import org.apache.flink.metrics.reporter.MetricReporter;
 import org.apache.flink.metrics.reporter.MetricReporterFactory;
 import org.apache.flink.runtime.metrics.scope.ScopeFormat;
 import org.apache.flink.runtime.metrics.util.TestReporter;
+import org.apache.flink.testutils.junit.extensions.ContextClassLoaderExtension;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +50,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Tests for the {@link ReporterSetup}. */
 public class ReporterSetupTest extends TestLogger {
+
+    @RegisterExtension
+    static final Extension CONTEXT_CLASS_LOADER_EXTENSION =
+            ContextClassLoaderExtension.builder()
+                    .withServiceEntry(
+                            MetricReporterFactory.class,
+                            TestReporterFactory.class.getName(),
+                            FailingFactory.class.getName(),
+                            InstantiationTypeTrackingTestReporterFactory.class.getName(),
+                            ConfigExposingReporterFactory.class.getName())
+                    .build();
 
     /** TestReporter1 class only for type differentiation. */
     static class TestReporter1 extends TestReporter {}
