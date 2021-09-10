@@ -1,0 +1,7 @@
+#
+#Thu Sep 09 15:11:54 CEST 2021
+Return\ and\ argument\ types\ of\ methods\ annotated\ with\ @Public\ must\ be\ annotated\ with\ @Public,\ too.=18257fc8-5913-4273-be79-c12cca8b74d1
+Return\ and\ argument\ types\ of\ methods\ annotated\ with\ @Public(Evolving)\ must\ be\ annotated\ with\ @Public(Evolving),\ too.=9e6b17fa-d49d-4726-bf1f-cbe7960dfa01
+Production\ code\ must\ not\ call\ methods\ annotated\ with\ @VisibleForTesting=d66fa820-206d-47c1-91dd-7e54c726c9fa
+Classes\ in\ API\ packages\ should\ have\ at\ least\ one\ API\ visibility\ annotation.=c7ca91e4-0a70-4fce-a405-abf8699fbbfd
+API\ visibility\ annotations\ must\ be\ declared\ on\ top-level\ (not\ nested)\ classes.=ff342253-8dc4-4b7c-9973-c4d4a8d118e4
