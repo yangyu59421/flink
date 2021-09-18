@@ -69,4 +69,12 @@ public class RowPartitionComputerTest {
                 "p1=myDefaultname/p2=3/",
                 generatePartitionPath(computer.generatePartValues(Row.of(1, null, 3, 4))));
     }
+
+    @Test
+    public void testEscapeBraces() throws Exception {
+        RowPartitionComputer computer =
+                new RowPartitionComputer("", new String[] {"p1"}, new String[] {"p1"});
+        Assert.assertEquals(
+                "p1=%7B1%7D/", generatePartitionPath(computer.generatePartValues(Row.of("{1}"))));
+    }
 }
