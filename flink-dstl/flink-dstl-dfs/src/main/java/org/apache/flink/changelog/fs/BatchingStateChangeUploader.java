@@ -17,6 +17,8 @@
 
 package org.apache.flink.changelog.fs;
 
+import org.apache.flink.metrics.Histogram;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,6 +77,7 @@ class BatchingStateChangeUploader implements StateChangeUploader {
 
     private final long maxBytesInFlight;
     private final LongAdder inFlightBytesCounter = new LongAdder();
+    private final Histogram logsPerUploadHistogram;
 
     BatchingStateChangeUploader(
             long persistDelayMs,
@@ -82,15 +85,17 @@ class BatchingStateChangeUploader implements StateChangeUploader {
             RetryPolicy retryPolicy,
             StateChangeUploader delegate,
             int numUploadThreads,
-            long maxBytesInFlight) {
+            long maxBytesInFlight,
+            ChangelogStorageMetricGroup metricGroup) {
         this(
                 persistDelayMs,
                 sizeThresholdBytes,
                 retryPolicy,
                 delegate,
                 SchedulerFactory.create(1, "ChangelogUploadScheduler", LOG),
-                new RetryingExecutor(numUploadThreads),
-                maxBytesInFlight);
+                new RetryingExecutor(numUploadThreads, metricGroup.getAttemptsPerUpload()),
+                maxBytesInFlight,
+                metricGroup);
     }
 
     BatchingStateChangeUploader(
@@ -100,7 +105,8 @@ class BatchingStateChangeUploader implements StateChangeUploader {
             StateChangeUploader delegate,
             ScheduledExecutorService scheduler,
             RetryingExecutor retryingExecutor,
-            long maxBytesInFlight) {
+            long maxBytesInFlight,
+            ChangelogStorageMetricGroup metricGroup) {
         this.scheduleDelayMs = persistDelayMs;
         this.scheduled = new LinkedList<>();
         this.scheduler = scheduler;
@@ -109,6 +115,13 @@ class BatchingStateChangeUploader implements StateChangeUploader {
         this.sizeThresholdBytes = sizeThresholdBytes;
         this.maxBytesInFlight = maxBytesInFlight;
         this.delegate = delegate;
+        this.logsPerUploadHistogram = metricGroup.getLogsPerUpload();
+        metricGroup.registerQueueSizeGauge(
+                () -> {
+                    synchronized (scheduled) {
+                        return scheduled.size();
+                    }
+                });
     }
 
     @Override
@@ -166,6 +179,7 @@ class BatchingStateChangeUploader implements StateChangeUploader {
                 tasks.forEach(task -> task.fail(error));
                 return;
             }
+            logsPerUploadHistogram.update(tasks.size());
             retryingExecutor.execute(retryPolicy, () -> delegate.upload(tasks));
         } catch (Throwable t) {
             tasks.forEach(task -> task.fail(t));
