@@ -78,10 +78,10 @@ final class Elasticsearch6DynamicSink implements DynamicTableSink {
     // on the sink itself.
     // --------------------------------------------------------------
 
-    private final ElasticSearchBuilderProvider builderProvider;
+    private final ElasticsearchBuilderProvider builderProvider;
 
     @FunctionalInterface
-    interface ElasticSearchBuilderProvider {
+    interface ElasticsearchBuilderProvider {
         ElasticsearchSink.Builder<RowData> createBuilder(
                 List<HttpHost> httpHosts, RowElasticsearchSinkFunction upsertSinkFunction);
     }
@@ -90,7 +90,7 @@ final class Elasticsearch6DynamicSink implements DynamicTableSink {
             EncodingFormat<SerializationSchema<RowData>> format,
             Elasticsearch6Configuration config,
             TableSchema schema,
-            ElasticSearchBuilderProvider builderProvider) {
+            ElasticsearchBuilderProvider builderProvider) {
         this.format = format;
         this.schema = schema;
         this.config = config;

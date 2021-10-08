@@ -189,7 +189,7 @@ public class Elasticsearch6DynamicSinkTest extends TestLogger {
     }
 
     private static class BuilderProvider
-            implements Elasticsearch6DynamicSink.ElasticSearchBuilderProvider {
+            implements Elasticsearch6DynamicSink.ElasticsearchBuilderProvider {
         public ElasticsearchSink.Builder<RowData> builderSpy;
         public ElasticsearchSink<RowData> sinkSpy;
 
