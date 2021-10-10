@@ -131,11 +131,6 @@ public abstract class AbstractKubernetesParameters implements KubernetesParamete
     }
 
     @Override
-    public String getFlinkLogDirInPod() {
-        return flinkConfig.getString(KubernetesConfigOptions.FLINK_LOG_DIR);
-    }
-
-    @Override
     public String getContainerEntrypoint() {
         return flinkConfig.getString(KubernetesConfigOptions.KUBERNETES_ENTRY_PATH);
     }

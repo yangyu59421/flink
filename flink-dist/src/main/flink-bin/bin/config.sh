@@ -95,6 +95,32 @@ readFromConfig() {
     [ -z "$value" ] && echo "$defaultValue" || echo "$value"
 }
 
+# Looks up a config value by key from a simple YAML-style key-value map.
+# $1: key1 to look up
+# $2: key2 to look up
+# $3: default value to return if key does not exist
+# $4: config file to read from
+readPriorityKeyFromConfig() {
+    local key1=$1
+    local key2=$2
+    local defaultValue=$3
+    local configFile=$4
+
+    # first extract the value with the given key (1st sed), then trim the result (2nd sed)
+    # if a key exists multiple times, take the "last" one (tail)
+    local value1=`sed -n "s/^[ ]*${key1}[ ]*: \([^#]*\).*$/\1/p" "${configFile}" | sed "s/^ *//;s/ *$//" | tail -n 1`
+    local value2=`sed -n "s/^[ ]*${key2}[ ]*: \([^#]*\).*$/\1/p" "${configFile}" | sed "s/^ *//;s/ *$//" | tail -n 1`
+
+    #key1 has priority,then key2,then default.
+    if [ -n "$value1" ]; then
+      echo "$value1"
+    elif [ -n "$value2" ]; then
+      echo "$value2"
+    else
+      echo "$defaultValue"
+    fi
+}
+
 ########################################################################################################################
 # DEFAULT CONFIG VALUES: These values will be used when nothing has been specified in conf/flink-conf.yaml
 # -or- the respective environment variables are not set.
@@ -124,6 +150,7 @@ KEY_TASKM_COMPUTE_NUMA="taskmanager.compute.numa"
 
 KEY_ENV_PID_DIR="env.pid.dir"
 KEY_ENV_LOG_DIR="env.log.dir"
+KEY_ENV_KUBERNETES_LOG_DIR="kubernetes.flink.log.dir"
 KEY_ENV_LOG_MAX="env.log.max"
 KEY_ENV_YARN_CONF_DIR="env.yarn.conf.dir"
 KEY_ENV_HADOOP_CONF_DIR="env.hadoop.conf.dir"
@@ -245,7 +272,8 @@ if [ -z "${MAX_LOG_FILE_NUMBER}" ]; then
 fi
 
 if [ -z "${FLINK_LOG_DIR}" ]; then
-    FLINK_LOG_DIR=$(readFromConfig ${KEY_ENV_LOG_DIR} "${DEFAULT_FLINK_LOG_DIR}" "${YAML_CONF}")
+    # Compatible 'kubernetes.flink.log.dir' configuration，but 'env.log.dir' has priority!
+    FLINK_LOG_DIR=$(readPriorityKeyFromConfig ${KEY_ENV_LOG_DIR}  ${KEY_ENV_KUBERNETES_LOG_DIR} "${DEFAULT_FLINK_LOG_DIR}" "${YAML_CONF}")
 fi
 
 if [ -z "${YARN_CONF_DIR}" ]; then

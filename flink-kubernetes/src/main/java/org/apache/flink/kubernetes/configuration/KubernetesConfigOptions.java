@@ -267,7 +267,8 @@ public class KubernetesConfigOptions {
                     .stringType()
                     .defaultValue("/opt/flink/log")
                     .withDescription(
-                            "The directory that logs of jobmanager and taskmanager be saved in the pod.");
+                            "The directory that logs of jobmanager and taskmanager be saved in the pod. This key "
+                                    + "has been deprecated, please use 'env.log.dir' first.");
 
     public static final ConfigOption<String> HADOOP_CONF_CONFIG_MAP =
             key("kubernetes.hadoop.conf.config-map.name")

@@ -78,9 +78,6 @@ public interface KubernetesParameters {
     /** Directory in Pod that stores the flink-conf.yaml, log4j.properties, and the logback.xml. */
     String getFlinkConfDirInPod();
 
-    /** Directory in Pod that saves the log files. */
-    String getFlinkLogDirInPod();
-
     /** The docker entrypoint that starts processes in the container. */
     String getContainerEntrypoint();
 
