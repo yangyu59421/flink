@@ -19,6 +19,7 @@
 package org.apache.flink.connector.pulsar.testutils.runtime;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connector.pulsar.common.utils.PulsarExceptionUtils;
 import org.apache.flink.connector.pulsar.source.enumerator.topic.TopicNameUtils;
 import org.apache.flink.connector.pulsar.source.enumerator.topic.TopicPartition;
 import org.apache.flink.connector.pulsar.source.enumerator.topic.TopicRange;
