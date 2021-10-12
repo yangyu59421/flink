@@ -19,6 +19,7 @@
 package org.apache.flink.connector.pulsar.testutils.runtime;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connector.pulsar.common.utils.PulsarExceptionUtils;
 import org.apache.flink.connector.pulsar.source.enumerator.topic.TopicNameUtils;
 import org.apache.flink.connector.pulsar.source.enumerator.topic.TopicPartition;
 import org.apache.flink.connector.pulsar.source.enumerator.topic.TopicRange;
@@ -28,12 +29,18 @@ import org.apache.flink.shaded.guava30.com.google.common.base.Strings;
 
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
+import org.apache.pulsar.client.api.Consumer;
+import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import org.apache.pulsar.common.naming.TopicName;
+import org.apache.pulsar.shade.org.apache.commons.io.IOUtils;
+
+import javax.validation.constraints.NotNull;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -44,7 +51,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -182,6 +192,38 @@ public class PulsarRuntimeOperator implements Serializable, Closeable {
             sneakyThrow(e);
             return emptyList();
         }
+    }
+
+    @NotNull
+    public <T> List<T> consumeMessage(String topic, Schema<T> schema, int count, int timeout)
+            throws TimeoutException, ExecutionException, InterruptedException {
+        return CompletableFuture.supplyAsync(
+                        () -> {
+                            Consumer<T> consumer = null;
+                            try {
+                                consumer =
+                                        client().newConsumer(schema)
+                                                .topic(topic)
+                                                .subscriptionInitialPosition(
+                                                        SubscriptionInitialPosition.Earliest)
+                                                .subscriptionName("test")
+                                                .subscribe();
+                                List<T> result = new ArrayList<>(count);
+                                for (int i = 0; i < count; i++) {
+                                    final Message<T> message = consumer.receive();
+                                    result.add(message.getValue());
+                                    consumer.acknowledge(message);
+                                }
+                                consumer.close();
+                                return result;
+                            } catch (Exception e) {
+                                PulsarExceptionUtils.sneakyThrow(e);
+                                return null;
+                            } finally {
+                                IOUtils.closeQuietly(consumer, i -> {});
+                            }
+                        })
+                .get(timeout, TimeUnit.MILLISECONDS);
     }
 
     public String serviceUrl() {

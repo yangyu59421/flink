@@ -44,7 +44,7 @@ public class PulsarSinkTest extends PulsarTestSuiteBase {
 
     @Override
     protected PulsarRuntime runtime() {
-        return PulsarRuntime.CONTAINER;
+        return PulsarRuntime.container();
     }
 
     @ParameterizedTest
