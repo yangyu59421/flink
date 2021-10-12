@@ -122,7 +122,8 @@ public class StreamExecSink extends CommonExecSink implements StreamExecNode<Obj
             }
         }
 
-        final boolean isCollectSink = tableSinkSpec.getTableSink() instanceof CollectDynamicSink;
+        final DynamicTableSink tableSink = tableSinkSpec.getTableSink(planner);
+        final boolean isCollectSink = tableSink instanceof CollectDynamicSink;
 
         final int rowtimeFieldIndex;
         if (rowtimeFieldIndices.size() > 1 && !isCollectSink) {
@@ -142,6 +143,11 @@ public class StreamExecSink extends CommonExecSink implements StreamExecNode<Obj
         }
 
         return createSinkTransformation(
-                planner, inputTransform, rowtimeFieldIndex, upsertMaterialize);
+                planner.getExecEnv(),
+                planner.getTableConfig(),
+                tableSink,
+                inputTransform,
+                rowtimeFieldIndex,
+                upsertMaterialize);
     }
 }
