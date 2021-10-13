@@ -31,7 +31,6 @@ import org.apache.flink.runtime.util.ZooKeeperUtils;
 import org.apache.flink.shaded.curator4.org.apache.curator.framework.CuratorFramework;
 import org.apache.flink.shaded.curator4.org.apache.curator.utils.ZKPaths;
 import org.apache.flink.shaded.zookeeper3.org.apache.zookeeper.KeeperException;
-import org.apache.flink.shaded.zookeeper3.org.apache.zookeeper.data.Stat;
 
 import javax.annotation.Nonnull;
 
@@ -104,32 +103,7 @@ public abstract class AbstractZooKeeperHaServices extends AbstractHaServices {
     }
 
     protected void deleteZNode(String path) throws Exception {
-        // delete the HA_CLUSTER_ID znode which is owned by this cluster
-
-        // Since we are using Curator version 2.12 there is a bug in deleting the children
-        // if there is a concurrent delete operation. Therefore we need to add this retry
-        // logic. See https://issues.apache.org/jira/browse/CURATOR-430 for more information.
-        // The retry logic can be removed once we upgrade to Curator version >= 4.0.1.
-        boolean zNodeDeleted = false;
-        while (!zNodeDeleted) {
-            Stat stat = curatorFrameworkWrapper.asCuratorFramework().checkExists().forPath(path);
-            if (stat == null) {
-                logger.debug("znode {} has been deleted", path);
-                return;
-            }
-            try {
-                curatorFrameworkWrapper
-                        .asCuratorFramework()
-                        .delete()
-                        .deletingChildrenIfNeeded()
-                        .forPath(path);
-                zNodeDeleted = true;
-            } catch (KeeperException.NoNodeException ignored) {
-                // concurrent delete operation. Try again.
-                logger.debug(
-                        "Retrying to delete znode because of other concurrent delete operation.");
-            }
-        }
+        ZooKeeperUtils.deleteZNode(curatorFrameworkWrapper.asCuratorFramework(), path);
     }
 
     /**

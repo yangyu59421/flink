@@ -22,8 +22,10 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.blob.BlobStoreService;
 import org.apache.flink.runtime.leaderelection.DefaultLeaderElectionService;
+import org.apache.flink.runtime.leaderelection.DefaultSingleLeaderElectionService;
 import org.apache.flink.runtime.leaderelection.LeaderElectionService;
-import org.apache.flink.runtime.leaderelection.ZooKeeperSingleLeaderElectionService;
+import org.apache.flink.runtime.leaderelection.SingleLeaderElectionService;
+import org.apache.flink.runtime.leaderelection.ZooKeeperSingleLeaderElectionDriverFactory;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalService;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.util.ZooKeeperUtils;
@@ -68,7 +70,7 @@ public class ZooKeeperSingleLeaderElectionHaServices extends AbstractZooKeeperHa
 
     @Nullable
     @GuardedBy("lock")
-    private ZooKeeperSingleLeaderElectionService zooKeeperSingleLeaderElectionDriver = null;
+    private SingleLeaderElectionService singleLeaderElectionService = null;
 
     public ZooKeeperSingleLeaderElectionHaServices(
             CuratorFrameworkWithUnhandledErrorListener curatorFrameworkWrapper,
@@ -86,7 +88,7 @@ public class ZooKeeperSingleLeaderElectionHaServices extends AbstractZooKeeperHa
 
     @Override
     protected LeaderElectionService createLeaderElectionService(String leaderName) {
-        final ZooKeeperSingleLeaderElectionService singleLeaderElectionDriver;
+        final SingleLeaderElectionService singleLeaderElectionDriver;
 
         synchronized (lock) {
             singleLeaderElectionDriver = getOrInitializeSingleLeaderElectionService();
@@ -97,24 +99,25 @@ public class ZooKeeperSingleLeaderElectionHaServices extends AbstractZooKeeperHa
     }
 
     @GuardedBy("lock")
-    private ZooKeeperSingleLeaderElectionService getOrInitializeSingleLeaderElectionService() {
-        if (zooKeeperSingleLeaderElectionDriver == null) {
+    private SingleLeaderElectionService getOrInitializeSingleLeaderElectionService() {
+        if (singleLeaderElectionService == null) {
             try {
-                zooKeeperSingleLeaderElectionDriver =
-                        new ZooKeeperSingleLeaderElectionService(
-                                leaderNamespacedCuratorFramework,
+                singleLeaderElectionService =
+                        new DefaultSingleLeaderElectionService(
                                 fatalErrorHandler,
-                                "Single leader election service");
+                                "Single leader election service.",
+                                new ZooKeeperSingleLeaderElectionDriverFactory(
+                                        leaderNamespacedCuratorFramework));
             } catch (Exception e) {
                 throw new FlinkRuntimeException(
                         String.format(
                                 "Could not initialize the %s",
-                                ZooKeeperSingleLeaderElectionService.class.getSimpleName()),
+                                DefaultSingleLeaderElectionService.class.getSimpleName()),
                         e);
             }
         }
 
-        return zooKeeperSingleLeaderElectionDriver;
+        return singleLeaderElectionService;
     }
 
     @Override
@@ -128,13 +131,13 @@ public class ZooKeeperSingleLeaderElectionHaServices extends AbstractZooKeeperHa
     protected void internalClose() throws Exception {
         Exception exception = null;
         synchronized (lock) {
-            if (zooKeeperSingleLeaderElectionDriver != null) {
+            if (singleLeaderElectionService != null) {
                 try {
-                    zooKeeperSingleLeaderElectionDriver.close();
+                    singleLeaderElectionService.close();
                 } catch (Exception e) {
                     exception = e;
                 }
-                zooKeeperSingleLeaderElectionDriver = null;
+                singleLeaderElectionService = null;
             }
         }
 
@@ -150,9 +153,6 @@ public class ZooKeeperSingleLeaderElectionHaServices extends AbstractZooKeeperHa
     @Override
     protected void internalCleanupJobData(JobID jobID) throws Exception {
         super.internalCleanupJobData(jobID);
-        deleteZNode(
-                ZooKeeperUtils.generateZookeeperPath(
-                        ZooKeeperUtils.getLeaderPath(), getLeaderPathForJobManager(jobID)));
     }
 
     @Override
@@ -167,7 +167,7 @@ public class ZooKeeperSingleLeaderElectionHaServices extends AbstractZooKeeperHa
 
     @Override
     protected String getLeaderPathForJobManager(JobID jobID) {
-        return '/' + jobID.toString();
+        return jobID.toString();
     }
 
     @Override

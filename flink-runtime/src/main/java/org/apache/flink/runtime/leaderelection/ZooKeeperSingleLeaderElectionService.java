@@ -49,7 +49,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-public class ZooKeeperSingleLeaderElectionService implements LeaderLatchListener {
+public class ZooKeeperSingleLeaderElectionService
+        implements LeaderLatchListener, SingleLeaderElectionService {
 
     private static final Logger LOG =
             LoggerFactory.getLogger(ZooKeeperSingleLeaderElectionService.class);
@@ -169,6 +170,7 @@ public class ZooKeeperSingleLeaderElectionService implements LeaderLatchListener
         return leaderInformation;
     }
 
+    @Override
     public void close() throws Exception {
         synchronized (lock) {
             if (!running) {
@@ -199,10 +201,12 @@ public class ZooKeeperSingleLeaderElectionService implements LeaderLatchListener
         }
     }
 
+    @Override
     public LeaderElectionDriverFactory createDriverFactory(String leaderName) {
         return new LeaderElectionDriverAdapterFactory(leaderName, this);
     }
 
+    @Override
     public void writeLeaderInformation(String leaderName, LeaderInformation leaderInformation) {
         Preconditions.checkState(running);
 
@@ -292,6 +296,7 @@ public class ZooKeeperSingleLeaderElectionService implements LeaderLatchListener
         }
     }
 
+    @Override
     public void registerLeaderElectionEventHandler(
             String id, LeaderElectionEventHandler leaderElectionEventHandler) {
 
@@ -309,6 +314,7 @@ public class ZooKeeperSingleLeaderElectionService implements LeaderLatchListener
         }
     }
 
+    @Override
     public void unregisterLeaderElectionEventHandler(String id) {
         final LeaderElectionEventHandler unregisteredLeaderElectionEventHandler;
         synchronized (lock) {
@@ -321,64 +327,10 @@ public class ZooKeeperSingleLeaderElectionService implements LeaderLatchListener
         }
     }
 
-    public boolean hasLeadership() {
+    @Override
+    public boolean hasLeadership(String leaderName) {
         Preconditions.checkState(running);
         return leaderLatch.hasLeadership();
-    }
-
-    private static final class SingleLeaderElectionDriverAdapter implements LeaderElectionDriver {
-        private final String leaderName;
-        private final ZooKeeperSingleLeaderElectionService zooKeeperSingleLeaderElectionDriver;
-
-        private SingleLeaderElectionDriverAdapter(
-                String leaderName,
-                ZooKeeperSingleLeaderElectionService zooKeeperSingleLeaderElectionDriver,
-                LeaderElectionEventHandler leaderElectionEventHandler) {
-            this.leaderName = leaderName;
-            this.zooKeeperSingleLeaderElectionDriver = zooKeeperSingleLeaderElectionDriver;
-
-            zooKeeperSingleLeaderElectionDriver.registerLeaderElectionEventHandler(
-                    leaderName, leaderElectionEventHandler);
-        }
-
-        @Override
-        public void writeLeaderInformation(LeaderInformation leaderInformation) {
-            zooKeeperSingleLeaderElectionDriver.writeLeaderInformation(
-                    leaderName, leaderInformation);
-        }
-
-        @Override
-        public boolean hasLeadership() {
-            return zooKeeperSingleLeaderElectionDriver.hasLeadership();
-        }
-
-        @Override
-        public void close() throws Exception {
-            zooKeeperSingleLeaderElectionDriver.unregisterLeaderElectionEventHandler(leaderName);
-        }
-    }
-
-    private static final class LeaderElectionDriverAdapterFactory
-            implements LeaderElectionDriverFactory {
-        private final String leaderName;
-        private final ZooKeeperSingleLeaderElectionService zooKeeperSingleLeaderElectionDriver;
-
-        private LeaderElectionDriverAdapterFactory(
-                String leaderName,
-                ZooKeeperSingleLeaderElectionService zooKeeperSingleLeaderElectionDriver) {
-            this.leaderName = leaderName;
-            this.zooKeeperSingleLeaderElectionDriver = zooKeeperSingleLeaderElectionDriver;
-        }
-
-        @Override
-        public LeaderElectionDriver createLeaderElectionDriver(
-                LeaderElectionEventHandler leaderEventHandler,
-                FatalErrorHandler fatalErrorHandler,
-                String leaderContenderDescription)
-                throws Exception {
-            return new SingleLeaderElectionDriverAdapter(
-                    leaderName, zooKeeperSingleLeaderElectionDriver, leaderEventHandler);
-        }
     }
 
     private static class ConnectionInfoNodeSelector implements TreeCacheSelector {
