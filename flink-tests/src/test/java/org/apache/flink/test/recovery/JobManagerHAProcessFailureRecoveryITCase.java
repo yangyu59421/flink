@@ -151,7 +151,7 @@ public class JobManagerHAProcessFailureRecoveryITCase extends TestLogger {
             String zkQuorum, final File coordinateDir, final File zookeeperStoragePath)
             throws Exception {
         Configuration config = new Configuration();
-        config.setString(HighAvailabilityOptions.HA_MODE, "ZOOKEEPER");
+        config.setString(HighAvailabilityOptions.HA_MODE, "ZOOKEEPER_SINGLE");
         config.setString(HighAvailabilityOptions.HA_ZOOKEEPER_QUORUM, zkQuorum);
         config.setString(
                 HighAvailabilityOptions.HA_STORAGE_PATH, zookeeperStoragePath.getAbsolutePath());

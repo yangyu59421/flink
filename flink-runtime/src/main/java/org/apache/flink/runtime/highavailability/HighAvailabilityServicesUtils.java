@@ -34,6 +34,7 @@ import org.apache.flink.runtime.highavailability.nonha.standalone.StandaloneClie
 import org.apache.flink.runtime.highavailability.nonha.standalone.StandaloneHaServices;
 import org.apache.flink.runtime.highavailability.zookeeper.ZooKeeperClientHAServices;
 import org.apache.flink.runtime.highavailability.zookeeper.ZooKeeperHaServices;
+import org.apache.flink.runtime.highavailability.zookeeper.ZooKeeperSingleLeaderElectionHaServices;
 import org.apache.flink.runtime.jobmanager.HighAvailabilityMode;
 import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.rpc.AddressResolution;
@@ -72,6 +73,14 @@ public class HighAvailabilityServicesUtils {
                         executor,
                         config,
                         blobStoreService);
+
+            case ZOOKEEPER_SINGLE:
+                return new ZooKeeperSingleLeaderElectionHaServices(
+                        ZooKeeperUtils.startCuratorFramework(config, fatalErrorHandler),
+                        config,
+                        executor,
+                        BlobUtils.createBlobStoreFromConfig(config),
+                        fatalErrorHandler);
 
             case FACTORY_CLASS:
                 return createCustomHAServices(config, executor);
@@ -125,6 +134,13 @@ public class HighAvailabilityServicesUtils {
                         executor,
                         configuration,
                         blobStoreService);
+            case ZOOKEEPER_SINGLE:
+                return new ZooKeeperSingleLeaderElectionHaServices(
+                        ZooKeeperUtils.startCuratorFramework(configuration, fatalErrorHandler),
+                        configuration,
+                        executor,
+                        BlobUtils.createBlobStoreFromConfig(configuration),
+                        fatalErrorHandler);
 
             case FACTORY_CLASS:
                 return createCustomHAServices(configuration, executor);
@@ -145,6 +161,7 @@ public class HighAvailabilityServicesUtils {
                                 configuration, AddressResolution.TRY_ADDRESS_RESOLUTION);
                 return new StandaloneClientHAServices(webMonitorAddress);
             case ZOOKEEPER:
+            case ZOOKEEPER_SINGLE:
                 return new ZooKeeperClientHAServices(
                         ZooKeeperUtils.startCuratorFramework(configuration, fatalErrorHandler),
                         configuration);
