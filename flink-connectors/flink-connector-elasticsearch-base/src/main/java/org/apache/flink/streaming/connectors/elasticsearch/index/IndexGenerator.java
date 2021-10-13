@@ -33,6 +33,6 @@ public interface IndexGenerator extends Serializable {
      */
     default void open() {}
 
-    /** Generate index name according the the given row. */
+    /** Generate index name according the given row. */
     String generate(Row row);
 }
