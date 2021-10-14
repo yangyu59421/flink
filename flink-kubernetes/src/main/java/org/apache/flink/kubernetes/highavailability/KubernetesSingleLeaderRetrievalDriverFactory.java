@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,36 +20,48 @@ package org.apache.flink.kubernetes.highavailability;
 
 import org.apache.flink.kubernetes.kubeclient.FlinkKubeClient;
 import org.apache.flink.kubernetes.kubeclient.KubernetesConfigMapSharedWatcher;
+import org.apache.flink.kubernetes.kubeclient.resources.KubernetesConfigMap;
 import org.apache.flink.kubernetes.utils.KubernetesUtils;
+import org.apache.flink.runtime.leaderelection.LeaderInformation;
+import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalDriver;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalDriverFactory;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalEventHandler;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 
+import java.util.Map;
 import java.util.concurrent.Executor;
 
-/** {@link LeaderRetrievalDriverFactory} implementation for Kubernetes. */
-public class KubernetesLeaderRetrievalDriverFactory implements LeaderRetrievalDriverFactory {
+/**
+ * Factory that instantiates a {@link KubernetesLeaderRetrievalDriver} in single leader election
+ * mode.
+ */
+public class KubernetesSingleLeaderRetrievalDriverFactory implements LeaderRetrievalDriverFactory {
 
     private final FlinkKubeClient kubeClient;
 
     private final KubernetesConfigMapSharedWatcher configMapSharedWatcher;
+
     private final Executor watchExecutor;
 
     private final String configMapName;
 
-    public KubernetesLeaderRetrievalDriverFactory(
+    private final String leaderName;
+
+    public KubernetesSingleLeaderRetrievalDriverFactory(
             FlinkKubeClient kubeClient,
             KubernetesConfigMapSharedWatcher configMapSharedWatcher,
             Executor watchExecutor,
-            String configMapName) {
+            String configMapName,
+            String leaderName) {
         this.kubeClient = kubeClient;
         this.configMapSharedWatcher = configMapSharedWatcher;
         this.watchExecutor = watchExecutor;
         this.configMapName = configMapName;
+        this.leaderName = leaderName;
     }
 
     @Override
-    public KubernetesLeaderRetrievalDriver createLeaderRetrievalDriver(
+    public LeaderRetrievalDriver createLeaderRetrievalDriver(
             LeaderRetrievalEventHandler leaderEventHandler, FatalErrorHandler fatalErrorHandler) {
         return new KubernetesLeaderRetrievalDriver(
                 kubeClient,
@@ -57,7 +69,19 @@ public class KubernetesLeaderRetrievalDriverFactory implements LeaderRetrievalDr
                 watchExecutor,
                 configMapName,
                 leaderEventHandler,
-                KubernetesUtils::getLeaderInformationFromConfigMap,
+                this::extractLeaderInformation,
                 fatalErrorHandler);
+    }
+
+    public LeaderInformation extractLeaderInformation(KubernetesConfigMap configMap) {
+        final String configDataLeaderKey = KubernetesUtils.createSingleLeaderKey(leaderName);
+
+        final Map<String, String> data = configMap.getData();
+
+        if (data.containsKey(configDataLeaderKey)) {
+            return KubernetesUtils.parseLeaderInformationSafely(data.get(configDataLeaderKey));
+        } else {
+            return LeaderInformation.empty();
+        }
     }
 }

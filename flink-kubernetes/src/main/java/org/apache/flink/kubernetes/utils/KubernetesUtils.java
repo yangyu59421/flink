@@ -43,6 +43,7 @@ import org.apache.flink.runtime.leaderelection.LeaderInformation;
 import org.apache.flink.runtime.persistence.RetrievableStateStorageHelper;
 import org.apache.flink.runtime.persistence.filesystem.FileSystemStateStorageHelper;
 import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
 import org.apache.flink.util.function.FunctionUtils;
 
@@ -57,6 +58,7 @@ import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.io.File;
@@ -479,6 +481,50 @@ public class KubernetesUtils {
     public enum ClusterComponent {
         JOB_MANAGER,
         TASK_MANAGER
+    }
+
+    private static final String LEADER_PREFIX = "org.apache.flink.k8s.leader.";
+    public static final char LEADER_INFORMATION_SEPARATOR = ',';
+
+    public static String encodeLeaderInformation(LeaderInformation leaderInformation) {
+        Preconditions.checkState(!leaderInformation.isEmpty());
+        return leaderInformation.getLeaderSessionID().toString()
+                + LEADER_INFORMATION_SEPARATOR
+                + leaderInformation.getLeaderAddress();
+    }
+
+    public static LeaderInformation parseLeaderInformationSafely(String value) {
+        try {
+            return parseLeaderInformation(value);
+        } catch (Throwable throwable) {
+            LOG.debug("Could not parse value {} into LeaderInformation.", value, throwable);
+            return LeaderInformation.empty();
+        }
+    }
+
+    private static LeaderInformation parseLeaderInformation(String value) {
+        final int splitIndex = value.indexOf(LEADER_INFORMATION_SEPARATOR);
+
+        Preconditions.checkState(splitIndex >= 0, "Expecting '<session_id>,<leader_address>'");
+
+        final UUID leaderSessionId = UUID.fromString(value.substring(0, splitIndex));
+        final String leaderAddress = value.substring(splitIndex + 1);
+
+        return LeaderInformation.known(leaderSessionId, leaderAddress);
+    }
+
+    @Nonnull
+    public static String createSingleLeaderKey(String leaderName) {
+        return LEADER_PREFIX + leaderName;
+    }
+
+    public static boolean isSingleLeaderKey(String key) {
+        return key.startsWith(LEADER_PREFIX);
+    }
+
+    @Nonnull
+    public static String extractLeaderName(String key) {
+        return key.substring(LEADER_PREFIX.length());
     }
 
     private KubernetesUtils() {}
