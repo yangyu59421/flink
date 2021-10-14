@@ -26,6 +26,10 @@ import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.testutils.CommonTestUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+
 import java.time.Duration;
 
 import static org.apache.flink.configuration.HeartbeatManagerOptions.HEARTBEAT_INTERVAL;
@@ -35,6 +39,8 @@ import static org.apache.flink.configuration.TaskManagerOptions.NUM_TASK_SLOTS;
 
 /** Test environment running job on {@link FlinkContainer}. */
 public class FlinkContainerTestEnvironment implements TestEnvironment, ClusterControllable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FlinkContainerTestEnvironment.class);
 
     private final FlinkContainer flinkContainer;
     private final String[] jarPath;
@@ -50,6 +56,7 @@ public class FlinkContainerTestEnvironment implements TestEnvironment, ClusterCo
                         .numTaskManagers(numTaskManagers)
                         .withFlinkConfiguration(flinkConfiguration)
                         .build();
+        this.flinkContainer.withLogConsumer(new Slf4jLogConsumer(LOG));
         this.jarPath = jarPath;
     }
 

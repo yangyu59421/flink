@@ -385,6 +385,17 @@ public class FlinkContainer extends GenericContainer<FlinkContainer> implements 
 
         private ImageFromDockerfile buildConfiguredImage(
                 Path workersFile, Path configurationFile, String baseImage) {
+            // Build cluster startup command
+            StringBuilder commandBuilder = new StringBuilder();
+            // Using "start-foreground" option for to print JM and TM logs on STDOUT
+            commandBuilder.append(FLINK_BIN).append("/jobmanager.sh start-foreground & ");
+            for (int i = 0; i < numTaskManagers; i++) {
+                commandBuilder.append(FLINK_BIN).append("/taskmanager.sh start-foreground & ");
+            }
+            // Prevent container from exiting
+            commandBuilder.append("tail -f /dev/null");
+
+            // Build Docker image
             return new ImageFromDockerfile("flink-dist-configured")
                     .withDockerfileFromBuilder(
                             builder ->
@@ -395,9 +406,7 @@ public class FlinkContainer extends GenericContainer<FlinkContainer> implements 
                                                     "flink/conf/"
                                                             + GlobalConfiguration
                                                                     .FLINK_CONF_FILENAME)
-                                            .cmd(
-                                                    FLINK_BIN
-                                                            + "/start-cluster.sh && tail -f /dev/null")
+                                            .cmd(commandBuilder.toString())
                                             .build())
                     .withFileFromPath("workers", workersFile)
                     .withFileFromPath(GlobalConfiguration.FLINK_CONF_FILENAME, configurationFile);
