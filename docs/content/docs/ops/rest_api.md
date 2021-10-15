@@ -2,7 +2,6 @@
 title: "REST API"
 weight: 7
 type: docs
-bookToc: false
 aliases:
   - /ops/rest_api.html
   - /internals/monitoring_rest_api.html
@@ -66,9 +65,18 @@ Querying unsupported/non-existing versions will return a 404 error.
 
 There exist several async operations among these APIs, e.g. `trigger savepoint`, `rescale a job`. They would return a `triggerid` to identify the operation you just POST and then you need to use that `triggerid` to query for the status of the operation.
 
+### JobManager
+
+[OpenAPI specification](/generated/rest_v1_dispatcher.yml)
+
+{{< hint warning >}}
+The OpenAPI specification is still experimental.
+{{< /hint >}} XXX
+
+#### API reference
+
 {{< tabs "f00ed142-b05f-44f0-bafc-799080c1d40d" >}}
 {{< tab "v1" >}}
-#### JobManager
 
 {{< generated/rest_v1_dispatcher >}}
 
