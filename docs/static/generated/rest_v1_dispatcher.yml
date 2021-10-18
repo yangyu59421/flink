@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: Flink JobManager REST API
   contact:
-    email: users@flink.apache.org
+    email: user@flink.apache.org
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html

@@ -71,7 +71,7 @@ There exist several async operations among these APIs, e.g. `trigger savepoint`,
 
 {{< hint warning >}}
 The OpenAPI specification is still experimental.
-{{< /hint >}} XXX
+{{< /hint >}}
 
 #### API reference
 

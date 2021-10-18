@@ -67,8 +67,6 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -92,8 +90,6 @@ import java.util.stream.Collectors;
  * be embedded into .md files using {@code {% include ${generated.docs.dir}/file.yml %}}.
  */
 public class OpenApiSpecGenerator {
-
-    private static final Logger LOG = LoggerFactory.getLogger(OpenApiSpecGenerator.class);
 
     private static final ModelConverterContext modelConverterContext;
 
@@ -173,7 +169,7 @@ public class OpenApiSpecGenerator {
                                         "%s/%s",
                                         apiVersion.getURLVersionPrefix(),
                                         EnvironmentInformation.getVersion()))
-                        .contact(new Contact().email("users@flink.apache.org"))
+                        .contact(new Contact().email("user@flink.apache.org"))
                         .license(
                                 new License()
                                         .name("Apache 2.0")
@@ -188,15 +184,8 @@ public class OpenApiSpecGenerator {
                         spec ->
                                 ((AsynchronousOperationStatusMessageHeaders<?, ?>) spec)
                                         .getValueClass())
-                .collect(Collectors.toSet())
-                .stream()
-                .sorted(
-                        new Comparator<Class<?>>() {
-                            @Override
-                            public int compare(Class<?> o1, Class<?> o2) {
-                                return o1.getSimpleName().compareTo(o2.getSimpleName());
-                            }
-                        })
+                .distinct()
+                .sorted(Comparator.comparing(Class::getSimpleName))
                 .map(clazz -> getSchema(clazz))
                 .collect(Collectors.toList());
     }
