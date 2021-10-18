@@ -1343,7 +1343,7 @@ under the License.
 						<!-- web dashboard non-binary assets -->
 						<exclude>flink-runtime-web/web-dashboard/src/assets/**</exclude>
 
-						<!-- generated contents -->
+						<!-- contents -->
 						<exclude>flink-runtime-web/web-dashboard/web/**</exclude>
 
 						<!-- downloaded and generated web libraries. -->
@@ -1413,6 +1413,7 @@ under the License.
 						<exclude>**/scalastyle-output.xml</exclude>
 						<exclude>build-target/**</exclude>
 						<exclude>docs/layouts/shortcodes/generated/**</exclude>
+						<exclude>docs/static/generated/**</exclude>
 						<!-- Tools: watchdog -->
 						<exclude>tools/artifacts/**</exclude>
 						<exclude>tools/flink*/**</exclude>
