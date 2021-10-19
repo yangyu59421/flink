@@ -179,6 +179,7 @@ public class AvroBulkFormatITCase extends SourceTestSuiteBase<RowData> {
             return SERIALIZER.copy(binaryRowData);
         }
 
+        /** Factory to create {@link AvroBulkFormatExternalContext}. */
         public static class Factory implements ExternalContext.Factory<RowData> {
 
             private final int blocksPerFile;

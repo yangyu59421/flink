@@ -42,6 +42,7 @@ public class AvroBulkFormatTestUtils {
                     },
                     new String[] {"a", "b"});
 
+    /** {@link AbstractAvroBulkFormat} for tests. */
     public static class TestingAvroBulkFormat
             extends AbstractAvroBulkFormat<GenericRecord, RowData, FileSourceSplit> {
 
