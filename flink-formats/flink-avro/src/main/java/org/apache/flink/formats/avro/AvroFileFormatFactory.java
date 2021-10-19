@@ -20,22 +20,33 @@ package org.apache.flink.formats.avro;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.BulkWriter;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
+import org.apache.flink.connector.file.src.FileSourceSplit;
+import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.formats.avro.typeutils.AvroSchemaConverter;
 import org.apache.flink.table.connector.ChangelogMode;
+import org.apache.flink.table.connector.format.BulkDecodingFormat;
 import org.apache.flink.table.connector.format.EncodingFormat;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
+import org.apache.flink.table.connector.source.DynamicTableSource;
+import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.factories.BulkReaderFormatFactory;
 import org.apache.flink.table.factories.BulkWriterFormatFactory;
 import org.apache.flink.table.factories.DynamicTableFactory;
+import org.apache.flink.table.filesystem.FileSystemConnectorOptions;
 import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.table.utils.PartitionPathUtils;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
@@ -43,15 +54,100 @@ import org.apache.avro.io.DatumWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.formats.avro.AvroFormatOptions.AVRO_OUTPUT_CODEC;
 
 /** Avro format factory for file system. */
 @Internal
-public class AvroFileFormatFactory implements BulkWriterFormatFactory {
+public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWriterFormatFactory {
 
     public static final String IDENTIFIER = "avro";
+
+    @Override
+    public BulkDecodingFormat<RowData> createDecodingFormat(
+            DynamicTableFactory.Context context, ReadableConfig formatOptions) {
+        return new BulkDecodingFormat<RowData>() {
+            @Override
+            public BulkFormat<RowData, FileSourceSplit> createRuntimeDecoder(
+                    DynamicTableSource.Context sourceContext, DataType producedDataType) {
+                RowType physicalRowype =
+                        (RowType)
+                                context.getCatalogTable()
+                                        .getResolvedSchema()
+                                        .toPhysicalRowDataType()
+                                        .getLogicalType();
+                List<String> physicalFieldNames = physicalRowype.getFieldNames();
+                RowType projectedType = (RowType) producedDataType.getLogicalType();
+                List<String> projectFields = projectedType.getFieldNames();
+                List<String> partitionKeys = context.getCatalogTable().getPartitionKeys();
+                int[] selectFieldIndices =
+                        projectFields.stream().mapToInt(physicalFieldNames::indexOf).toArray();
+
+                // partition keys are represented in directory names and won't show up in avro files
+                List<String> nonPartitionPhysicalFields =
+                        physicalFieldNames.stream()
+                                .filter(s -> !partitionKeys.contains(s))
+                                .collect(Collectors.toList());
+                RowType nonPartitionPhysicalFieldsRowType =
+                        RowType.of(
+                                false,
+                                nonPartitionPhysicalFields.stream()
+                                        .map(
+                                                s ->
+                                                        context.getCatalogTable()
+                                                                .getResolvedSchema()
+                                                                .getColumn(s)
+                                                                .get()
+                                                                .getDataType()
+                                                                .getLogicalType())
+                                        .toArray(LogicalType[]::new),
+                                nonPartitionPhysicalFields.toArray(new String[0]));
+
+                List<String> nonPartitionProjectFields =
+                        projectFields.stream()
+                                .filter(s -> !partitionKeys.contains(s))
+                                .collect(Collectors.toList());
+                int[] nonPartitionProjectIndexInProducedRecord =
+                        nonPartitionProjectFields.stream()
+                                .mapToInt(projectFields::indexOf)
+                                .toArray();
+                int[] nonPartitionProjectIndexInAvroRecord =
+                        nonPartitionProjectFields.stream()
+                                .mapToInt(nonPartitionPhysicalFields::indexOf)
+                                .toArray();
+
+                String defaultPartitionName =
+                        context.getCatalogTable()
+                                .getOptions()
+                                .getOrDefault(
+                                        FileSystemConnectorOptions.PARTITION_DEFAULT_NAME.key(),
+                                        FileSystemConnectorOptions.PARTITION_DEFAULT_NAME
+                                                .defaultValue());
+
+                return new AvroGenericRecordBulkFormat(
+                        sourceContext,
+                        nonPartitionPhysicalFieldsRowType,
+                        physicalFieldNames.toArray(new String[0]),
+                        context.getCatalogTable()
+                                .getResolvedSchema()
+                                .getColumnDataTypes()
+                                .toArray(new DataType[0]),
+                        selectFieldIndices,
+                        partitionKeys,
+                        defaultPartitionName,
+                        nonPartitionProjectIndexInProducedRecord,
+                        nonPartitionProjectIndexInAvroRecord);
+            }
+
+            @Override
+            public ChangelogMode getChangelogMode() {
+                return ChangelogMode.insertOnly();
+            }
+        };
+    }
 
     @Override
     public EncodingFormat<BulkWriter.Factory<RowData>> createEncodingFormat(
@@ -88,6 +184,94 @@ public class AvroFileFormatFactory implements BulkWriterFormatFactory {
         Set<ConfigOption<?>> options = new HashSet<>();
         options.add(AVRO_OUTPUT_CODEC);
         return options;
+    }
+
+    private static class AvroGenericRecordBulkFormat
+            extends AbstractAvroBulkFormat<GenericRecord, RowData, FileSourceSplit> {
+
+        private static final long serialVersionUID = 1L;
+
+        private final RowType physicalRowType;
+        private final TypeInformation<RowData> typeInfo;
+
+        private final String[] physicalFieldNames;
+        private final DataType[] physicalFieldTypes;
+        private final int[] selectFieldIndices;
+        private final List<String> partitionKeys;
+        private final String defaultPartitionValue;
+
+        private final int[] nonPartitionProjectIndexInProducedRecord;
+        private final int[] nonPartitionProjectIndexInAvroRecord;
+
+        private transient AvroToRowDataConverters.AvroToRowDataConverter converter;
+        private transient GenericRecord reusedAvroRecord;
+        private transient GenericRowData reusedRowData;
+
+        public AvroGenericRecordBulkFormat(
+                DynamicTableSource.Context context,
+                RowType physicalRowType,
+                String[] physicalFieldNames,
+                DataType[] physicalFieldTypes,
+                int[] selectFieldIndices,
+                List<String> partitionKeys,
+                String defaultPartitionValue,
+                int[] nonPartitionProjectIndexInProducedRecord,
+                int[] nonPartitionProjectIndexInAvroRecord) {
+            this.physicalRowType = physicalRowType;
+            this.typeInfo = context.createTypeInformation(physicalRowType);
+
+            this.physicalFieldNames = physicalFieldNames;
+            this.physicalFieldTypes = physicalFieldTypes;
+            this.selectFieldIndices = selectFieldIndices;
+            this.partitionKeys = partitionKeys;
+            this.defaultPartitionValue = defaultPartitionValue;
+
+            this.nonPartitionProjectIndexInProducedRecord =
+                    nonPartitionProjectIndexInProducedRecord;
+            this.nonPartitionProjectIndexInAvroRecord = nonPartitionProjectIndexInAvroRecord;
+        }
+
+        @Override
+        protected void open(FileSourceSplit split) {
+            Schema schema = AvroSchemaConverter.convertToSchema(physicalRowType);
+            reusedAvroRecord = new GenericData.Record(schema);
+
+            reusedRowData =
+                    PartitionPathUtils.fillPartitionValueForRecord(
+                            physicalFieldNames,
+                            physicalFieldTypes,
+                            selectFieldIndices,
+                            partitionKeys,
+                            split.path(),
+                            defaultPartitionValue);
+
+            converter = AvroToRowDataConverters.createRowConverter(physicalRowType);
+        }
+
+        @Override
+        RowData convert(GenericRecord record) {
+            if (record == null) {
+                return null;
+            }
+            GenericRowData row = (GenericRowData) converter.convert(record);
+
+            for (int i = 0; i < nonPartitionProjectIndexInAvroRecord.length; i++) {
+                reusedRowData.setField(
+                        nonPartitionProjectIndexInProducedRecord[i],
+                        row.getField(nonPartitionProjectIndexInAvroRecord[i]));
+            }
+            return reusedRowData;
+        }
+
+        @Override
+        GenericRecord getReusedAvroObject() {
+            return reusedAvroRecord;
+        }
+
+        @Override
+        public TypeInformation<RowData> getProducedType() {
+            return typeInfo;
+        }
     }
 
     /**
