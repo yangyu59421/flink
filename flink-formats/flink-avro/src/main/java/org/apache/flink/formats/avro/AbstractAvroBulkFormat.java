@@ -23,6 +23,7 @@ import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.connector.file.src.util.IteratorResultIterator;
+import org.apache.flink.connector.file.src.util.Pool;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.avro.utils.FSDataInputStreamWrapper;
@@ -36,8 +37,6 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /** Provides a {@link BulkFormat} for Avro records. */
 public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSplit>
@@ -79,25 +78,25 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
 
     protected void open(SplitT split) {}
 
-    abstract T convert(A record);
+    protected abstract T convert(A record);
 
-    abstract A getReusedAvroObject();
+    protected abstract A createReusedAvroRecord();
 
     private class AvroReader implements BulkFormat.Reader<T> {
 
         private final DataFileReader<A> reader;
-        private final A reuse;
 
         private final long end;
-        private final BlockingQueue<Boolean> blockingQueue;
+        private final Pool<A> pool;
 
         private long currentBlockStart;
         private long currentRecordsToSkip;
 
         private AvroReader(Path path, long offset, long end, long blockStart, long recordsToSkip)
                 throws IOException {
+            A reuse = createReusedAvroRecord();
+
             this.reader = createReaderFromPath(path);
-            this.reuse = getReusedAvroObject();
             if (blockStart >= 0) {
                 reader.seek(blockStart);
             } else {
@@ -108,7 +107,8 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
             }
 
             this.end = end;
-            this.blockingQueue = new LinkedBlockingQueue<>(1);
+            this.pool = new Pool<>(1);
+            this.pool.add(reuse);
 
             this.currentBlockStart = reader.previousSync();
             this.currentRecordsToSkip = recordsToSkip;
@@ -126,15 +126,18 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
         @Nullable
         @Override
         public RecordIterator<T> readBatch() throws IOException {
-            if (reachEnd()) {
-                return null;
-            }
-
+            A reuse;
             try {
-                blockingQueue.put(true);
+                reuse = pool.pollEntry();
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(
                         "Interrupted while waiting for the previous batch to be consumed", e);
+            }
+
+            if (reachEnd()) {
+                pool.recycler().recycle(reuse);
+                return null;
             }
 
             currentBlockStart = reader.previousSync();
@@ -168,14 +171,7 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
                     iterator,
                     currentBlockStart,
                     recordsToSkip,
-                    () -> {
-                        try {
-                            blockingQueue.take();
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(
-                                    "Interrupted while finishing the current batch", e);
-                        }
-                    });
+                    () -> pool.recycler().recycle(reuse));
         }
 
         private boolean reachEnd() throws IOException {

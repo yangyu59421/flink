@@ -57,12 +57,12 @@ public class AvroBulkFormatTestUtils {
         }
 
         @Override
-        RowData convert(GenericRecord record) {
+        protected RowData convert(GenericRecord record) {
             return record == null ? null : (RowData) converter.convert(record);
         }
 
         @Override
-        GenericRecord getReusedAvroObject() {
+        protected GenericRecord createReusedAvroRecord() {
             return reusedAvroRecord;
         }
 

@@ -249,7 +249,7 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
         }
 
         @Override
-        RowData convert(GenericRecord record) {
+        protected RowData convert(GenericRecord record) {
             if (record == null) {
                 return null;
             }
@@ -264,7 +264,7 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
         }
 
         @Override
-        GenericRecord getReusedAvroObject() {
+        protected GenericRecord createReusedAvroRecord() {
             return reusedAvroRecord;
         }
 
