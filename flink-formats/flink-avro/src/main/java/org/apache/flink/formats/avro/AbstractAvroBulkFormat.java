@@ -135,6 +135,7 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
                         "Interrupted while waiting for the previous batch to be consumed", e);
             }
 
+            // actual reading happens here
             if (reachEnd()) {
                 pool.recycler().recycle(reuse);
                 return null;
@@ -142,29 +143,8 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
 
             currentBlockStart = reader.previousSync();
             Iterator<T> iterator =
-                    new Iterator<T>() {
-                        @Override
-                        public boolean hasNext() {
-                            try {
-                                return !reachEnd() && reader.previousSync() == currentBlockStart;
-                            } catch (IOException e) {
-                                throw new RuntimeException(
-                                        "Encountered exception when reading from avro format file",
-                                        e);
-                            }
-                        }
-
-                        @Override
-                        public T next() {
-                            try {
-                                return convert(reader.next(reuse));
-                            } catch (IOException e) {
-                                throw new RuntimeException(
-                                        "Encountered exception when reading from avro format file",
-                                        e);
-                            }
-                        }
-                    };
+                    new AvroBlockIterator(
+                            reader.getBlockCount() - currentRecordsToSkip, reader, reuse);
             long recordsToSkip = currentRecordsToSkip;
             currentRecordsToSkip = 0;
             return new IteratorResultIterator<>(
@@ -175,12 +155,44 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
         }
 
         private boolean reachEnd() throws IOException {
+            // reading from file happens here, reader.hasNext will read the next block when needed
             return !reader.hasNext() || reader.pastSync(end);
         }
 
         @Override
         public void close() throws IOException {
             reader.close();
+        }
+    }
+
+    private class AvroBlockIterator implements Iterator<T> {
+
+        private long numRecordsRemaining;
+        private final DataFileReader<A> reader;
+        private final A reuse;
+
+        private AvroBlockIterator(long numRecordsRemaining, DataFileReader<A> reader, A reuse) {
+            this.numRecordsRemaining = numRecordsRemaining;
+            this.reader = reader;
+            this.reuse = reuse;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return numRecordsRemaining > 0;
+        }
+
+        @Override
+        public T next() {
+            try {
+                numRecordsRemaining--;
+                // reader.next merely deserialize bytes in memory to java objects
+                // and will not read from file
+                return convert(reader.next(reuse));
+            } catch (IOException e) {
+                throw new RuntimeException(
+                        "Encountered exception when reading from avro format file", e);
+            }
         }
     }
 }
