@@ -26,8 +26,11 @@ import org.apache.flink.connector.file.src.util.IteratorResultIterator;
 import org.apache.flink.connector.file.src.util.Pool;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.formats.avro.typeutils.AvroSchemaConverter;
 import org.apache.flink.formats.avro.utils.FSDataInputStreamWrapper;
+import org.apache.flink.table.types.logical.RowType;
 
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableInput;
 import org.apache.avro.generic.GenericDatumReader;
@@ -43,6 +46,12 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
         implements BulkFormat<T, SplitT> {
 
     private static final long serialVersionUID = 1L;
+
+    protected final RowType readerRowType;
+
+    protected AbstractAvroBulkFormat(RowType readerRowType) {
+        this.readerRowType = readerRowType;
+    }
 
     @Override
     public AvroReader createReader(Configuration config, SplitT split) throws IOException {
@@ -116,7 +125,8 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
 
         private DataFileReader<A> createReaderFromPath(Path path) throws IOException {
             FileSystem fileSystem = path.getFileSystem();
-            DatumReader<A> datumReader = new GenericDatumReader<>();
+            Schema readerSchema = AvroSchemaConverter.convertToSchema(readerRowType);
+            DatumReader<A> datumReader = new GenericDatumReader<>(null, readerSchema);
             SeekableInput in =
                     new FSDataInputStreamWrapper(
                             fileSystem.open(path), fileSystem.getFileStatus(path).getLen());

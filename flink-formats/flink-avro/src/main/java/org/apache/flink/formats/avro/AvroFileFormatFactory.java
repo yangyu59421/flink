@@ -53,10 +53,10 @@ import org.apache.avro.io.DatumWriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.apache.flink.formats.avro.AvroFormatOptions.AVRO_OUTPUT_CODEC;
 
@@ -73,52 +73,9 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
             @Override
             public BulkFormat<RowData, FileSourceSplit> createRuntimeDecoder(
                     DynamicTableSource.Context sourceContext, DataType producedDataType) {
-                RowType physicalRowype =
-                        (RowType)
-                                context.getCatalogTable()
-                                        .getResolvedSchema()
-                                        .toPhysicalRowDataType()
-                                        .getLogicalType();
-                List<String> physicalFieldNames = physicalRowype.getFieldNames();
-                RowType projectedType = (RowType) producedDataType.getLogicalType();
-                List<String> projectFields = projectedType.getFieldNames();
+                DataType physicalDataType =
+                        context.getCatalogTable().getResolvedSchema().toPhysicalRowDataType();
                 List<String> partitionKeys = context.getCatalogTable().getPartitionKeys();
-                int[] selectFieldIndices =
-                        projectFields.stream().mapToInt(physicalFieldNames::indexOf).toArray();
-
-                // partition keys are represented in directory names and won't show up in avro files
-                List<String> nonPartitionPhysicalFields =
-                        physicalFieldNames.stream()
-                                .filter(s -> !partitionKeys.contains(s))
-                                .collect(Collectors.toList());
-                RowType nonPartitionPhysicalFieldsRowType =
-                        RowType.of(
-                                false,
-                                nonPartitionPhysicalFields.stream()
-                                        .map(
-                                                s ->
-                                                        context.getCatalogTable()
-                                                                .getResolvedSchema()
-                                                                .getColumn(s)
-                                                                .get()
-                                                                .getDataType()
-                                                                .getLogicalType())
-                                        .toArray(LogicalType[]::new),
-                                nonPartitionPhysicalFields.toArray(new String[0]));
-
-                List<String> nonPartitionProjectFields =
-                        projectFields.stream()
-                                .filter(s -> !partitionKeys.contains(s))
-                                .collect(Collectors.toList());
-                int[] nonPartitionProjectIndexInProducedRecord =
-                        nonPartitionProjectFields.stream()
-                                .mapToInt(projectFields::indexOf)
-                                .toArray();
-                int[] nonPartitionProjectIndexInAvroRecord =
-                        nonPartitionProjectFields.stream()
-                                .mapToInt(nonPartitionPhysicalFields::indexOf)
-                                .toArray();
-
                 String defaultPartitionName =
                         context.getCatalogTable()
                                 .getOptions()
@@ -126,20 +83,12 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
                                         FileSystemConnectorOptions.PARTITION_DEFAULT_NAME.key(),
                                         FileSystemConnectorOptions.PARTITION_DEFAULT_NAME
                                                 .defaultValue());
-
                 return new AvroGenericRecordBulkFormat(
                         sourceContext,
-                        nonPartitionPhysicalFieldsRowType,
-                        physicalFieldNames.toArray(new String[0]),
-                        context.getCatalogTable()
-                                .getResolvedSchema()
-                                .getColumnDataTypes()
-                                .toArray(new DataType[0]),
-                        selectFieldIndices,
+                        physicalDataType,
+                        producedDataType,
                         partitionKeys,
-                        defaultPartitionName,
-                        nonPartitionProjectIndexInProducedRecord,
-                        nonPartitionProjectIndexInAvroRecord);
+                        defaultPartitionName);
             }
 
             @Override
@@ -191,61 +140,61 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
 
         private static final long serialVersionUID = 1L;
 
-        private final RowType physicalRowType;
-        private final TypeInformation<RowData> typeInfo;
-
-        private final String[] physicalFieldNames;
-        private final DataType[] physicalFieldTypes;
-        private final int[] selectFieldIndices;
+        // all physical fields in the source schema
+        private final DataType physicalDataType;
+        // projected physical fields
+        private final DataType producedDataType;
+        TypeInformation<RowData> producedTypeInfo;
         private final List<String> partitionKeys;
         private final String defaultPartitionValue;
-
-        private final int[] nonPartitionProjectIndexInProducedRecord;
-        private final int[] nonPartitionProjectIndexInAvroRecord;
 
         private transient AvroToRowDataConverters.AvroToRowDataConverter converter;
         private transient GenericRecord reusedAvroRecord;
         private transient GenericRowData reusedRowData;
+        // we should fill i-th field of reusedRowData with
+        // readerRowTypeIndex[i]-th field of reusedAvroRecord
+        private transient int[] readerRowTypeIndex;
 
         public AvroGenericRecordBulkFormat(
                 DynamicTableSource.Context context,
-                RowType physicalRowType,
-                String[] physicalFieldNames,
-                DataType[] physicalFieldTypes,
-                int[] selectFieldIndices,
+                DataType physicalDataType,
+                DataType producedDataType,
                 List<String> partitionKeys,
-                String defaultPartitionValue,
-                int[] nonPartitionProjectIndexInProducedRecord,
-                int[] nonPartitionProjectIndexInAvroRecord) {
-            this.physicalRowType = physicalRowType;
-            this.typeInfo = context.createTypeInformation(physicalRowType);
-
-            this.physicalFieldNames = physicalFieldNames;
-            this.physicalFieldTypes = physicalFieldTypes;
-            this.selectFieldIndices = selectFieldIndices;
+                String defaultPartitionValue) {
+            // partition keys are stored in file paths, not in avro file contents
+            super(getNotNullRowTypeWithExclusion(producedDataType, partitionKeys));
+            this.physicalDataType = physicalDataType;
+            this.producedDataType = producedDataType;
+            this.producedTypeInfo = context.createTypeInformation(producedDataType);
             this.partitionKeys = partitionKeys;
             this.defaultPartitionValue = defaultPartitionValue;
-
-            this.nonPartitionProjectIndexInProducedRecord =
-                    nonPartitionProjectIndexInProducedRecord;
-            this.nonPartitionProjectIndexInAvroRecord = nonPartitionProjectIndexInAvroRecord;
         }
 
         @Override
         protected void open(FileSourceSplit split) {
-            Schema schema = AvroSchemaConverter.convertToSchema(physicalRowType);
+            converter = AvroToRowDataConverters.createRowConverter(readerRowType);
+
+            Schema schema = AvroSchemaConverter.convertToSchema(readerRowType);
             reusedAvroRecord = new GenericData.Record(schema);
 
+            List<String> physicalFieldNames = DataType.getFieldNames(physicalDataType);
+            int[] selectFieldIndices =
+                    DataType.getFieldNames(producedDataType).stream()
+                            .mapToInt(physicalFieldNames::indexOf)
+                            .toArray();
             reusedRowData =
                     PartitionPathUtils.fillPartitionValueForRecord(
-                            physicalFieldNames,
-                            physicalFieldTypes,
+                            physicalFieldNames.toArray(new String[0]),
+                            physicalDataType.getChildren().toArray(new DataType[0]),
                             selectFieldIndices,
                             partitionKeys,
                             split.path(),
                             defaultPartitionValue);
 
-            converter = AvroToRowDataConverters.createRowConverter(physicalRowType);
+            readerRowTypeIndex =
+                    DataType.getFieldNames(producedDataType).stream()
+                            .mapToInt(name -> readerRowType.getFieldNames().indexOf(name))
+                            .toArray();
         }
 
         @Override
@@ -255,10 +204,10 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
             }
             GenericRowData row = (GenericRowData) converter.convert(record);
 
-            for (int i = 0; i < nonPartitionProjectIndexInAvroRecord.length; i++) {
-                reusedRowData.setField(
-                        nonPartitionProjectIndexInProducedRecord[i],
-                        row.getField(nonPartitionProjectIndexInAvroRecord[i]));
+            for (int i = 0; i < readerRowTypeIndex.length; i++) {
+                if (readerRowTypeIndex[i] >= 0) {
+                    reusedRowData.setField(i, row.getField(readerRowTypeIndex[i]));
+                }
             }
             return reusedRowData;
         }
@@ -270,7 +219,23 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
 
         @Override
         public TypeInformation<RowData> getProducedType() {
-            return typeInfo;
+            return producedTypeInfo;
+        }
+
+        private static RowType getNotNullRowTypeWithExclusion(
+                DataType rowDataType, List<String> excludedFieldNames) {
+            RowType rowType = (RowType) rowDataType.getLogicalType();
+            List<LogicalType> types = new ArrayList<>();
+            List<String> names = new ArrayList<>();
+            for (RowType.RowField field : rowType.getFields()) {
+                if (excludedFieldNames.contains(field.getName())) {
+                    continue;
+                }
+                types.add(field.getType());
+                names.add(field.getName());
+            }
+            return RowType.of(
+                    false, types.toArray(new LogicalType[0]), names.toArray(new String[0]));
         }
     }
 

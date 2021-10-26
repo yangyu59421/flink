@@ -49,6 +49,10 @@ public class AvroBulkFormatTestUtils {
         private transient GenericRecord reusedAvroRecord;
         private transient AvroToRowDataConverters.AvroToRowDataConverter converter;
 
+        protected TestingAvroBulkFormat() {
+            super(ROW_TYPE);
+        }
+
         @Override
         protected void open(FileSourceSplit split) {
             Schema schema = AvroSchemaConverter.convertToSchema(ROW_TYPE);
