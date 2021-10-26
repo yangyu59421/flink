@@ -25,10 +25,10 @@ import org.apache.flink.connectors.test.common.environment.TestEnvironment;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.testutils.CommonTestUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.tests.util.flink.container.FlinkContainer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
 
 import java.time.Duration;
 
@@ -52,11 +52,10 @@ public class FlinkContainerTestEnvironment implements TestEnvironment, ClusterCo
         flinkConfiguration.set(NUM_TASK_SLOTS, numSlotsPerTaskManager);
 
         this.flinkContainer =
-                FlinkContainer.builder()
-                        .numTaskManagers(numTaskManagers)
-                        .withFlinkConfiguration(flinkConfiguration)
+                FlinkContainer.builder(numTaskManagers)
+                        .withConfiguration(flinkConfiguration)
+                        .withLogger(LOG)
                         .build();
-        this.flinkContainer.withLogConsumer(new Slf4jLogConsumer(LOG));
         this.jarPath = jarPath;
     }
 
@@ -77,8 +76,8 @@ public class FlinkContainerTestEnvironment implements TestEnvironment, ClusterCo
     @Override
     public StreamExecutionEnvironment createExecutionEnvironment() {
         return StreamExecutionEnvironment.createRemoteEnvironment(
-                this.flinkContainer.getHost(),
-                this.flinkContainer.getMappedPort(FlinkContainer.JOB_MANAGER_REST_PORT),
+                this.flinkContainer.getJobManagerHost(),
+                this.flinkContainer.getJobManagerPort(),
                 this.jarPath);
     }
 
