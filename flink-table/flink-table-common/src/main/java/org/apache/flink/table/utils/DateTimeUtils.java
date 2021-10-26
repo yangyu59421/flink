@@ -1128,7 +1128,8 @@ public class DateTimeUtils {
             case QUARTER:
             case WEEK:
                 int days = (int) (utcTs / MILLIS_PER_DAY + EPOCH_JULIAN);
-                return julianDateFloor(range, days, true) * MILLIS_PER_DAY - offset;
+                long dateInMillis = julianDateFloor(range, days, true) * MILLIS_PER_DAY;
+                return dateInMillis - tz.getOffset(dateInMillis);
             default:
                 // for MINUTE and SECONDS etc...,
                 // it is more effective to use arithmetic Method
@@ -1159,7 +1160,8 @@ public class DateTimeUtils {
             case QUARTER:
             case WEEK:
                 int days = (int) (utcTs / MILLIS_PER_DAY + EPOCH_JULIAN);
-                return julianDateFloor(range, days, false) * MILLIS_PER_DAY - offset;
+                long dateInMillis = julianDateFloor(range, days, false) * MILLIS_PER_DAY;
+                return dateInMillis - tz.getOffset(dateInMillis);
             default:
                 // for MINUTE and SECONDS etc...,
                 // it is more effective to use arithmetic Method
