@@ -37,8 +37,8 @@ import static org.apache.flink.testutils.junit.RetryExtension.getTestMethodKey;
 public class RetryTestExecutionExtension
         implements ExecutionCondition, TestExecutionExceptionHandler, AfterEachCallback {
     public static final Logger LOG = LoggerFactory.getLogger(RetryTestExecutionExtension.class);
-    private int retryIndex;
-    private int totalTimes;
+    private final int retryIndex;
+    private final int totalTimes;
     private Class<? extends Throwable> repeatableException;
 
     public RetryTestExecutionExtension(
