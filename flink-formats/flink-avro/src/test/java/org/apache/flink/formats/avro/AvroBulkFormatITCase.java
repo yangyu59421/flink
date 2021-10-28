@@ -146,7 +146,7 @@ public class AvroBulkFormatITCase extends SourceTestSuiteBase<RowData> {
         }
 
         @Override
-        public Collection<RowData> generateTestData(int splitIndex, long seed) {
+        public List<RowData> generateTestData(int splitIndex, long seed) {
             Random random = new Random(seed);
             List<RowData> data = new ArrayList<>();
             for (int i = 0; i < blocksPerFile; i++) {
