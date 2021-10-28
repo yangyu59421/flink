@@ -162,7 +162,9 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
                 List<String> partitionKeys,
                 String defaultPartitionValue) {
             // partition keys are stored in file paths, not in avro file contents
-            super(getNotNullRowTypeWithExclusion(producedDataType, partitionKeys));
+            super(
+                    AvroSchemaConverter.convertToSchema(
+                            getNotNullRowTypeWithExclusion(producedDataType, partitionKeys)));
             this.physicalDataType = physicalDataType;
             this.producedDataType = producedDataType;
             this.producedTypeInfo = context.createTypeInformation(producedDataType);
@@ -172,10 +174,10 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
 
         @Override
         protected void open(FileSourceSplit split) {
-            converter = AvroToRowDataConverters.createRowConverter(readerRowType);
+            RowType readerRowType = getNotNullRowTypeWithExclusion(producedDataType, partitionKeys);
 
-            Schema schema = AvroSchemaConverter.convertToSchema(readerRowType);
-            reusedAvroRecord = new GenericData.Record(schema);
+            converter = AvroToRowDataConverters.createRowConverter(readerRowType);
+            reusedAvroRecord = new GenericData.Record(readerSchema);
 
             List<String> physicalFieldNames = DataType.getFieldNames(physicalDataType);
             int[] selectFieldIndices =

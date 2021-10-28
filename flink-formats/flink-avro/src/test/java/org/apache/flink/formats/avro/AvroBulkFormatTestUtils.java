@@ -27,7 +27,6 @@ import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 
-import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 
@@ -50,13 +49,12 @@ public class AvroBulkFormatTestUtils {
         private transient AvroToRowDataConverters.AvroToRowDataConverter converter;
 
         protected TestingAvroBulkFormat() {
-            super(ROW_TYPE);
+            super(AvroSchemaConverter.convertToSchema(ROW_TYPE));
         }
 
         @Override
         protected void open(FileSourceSplit split) {
-            Schema schema = AvroSchemaConverter.convertToSchema(ROW_TYPE);
-            reusedAvroRecord = new GenericData.Record(schema);
+            reusedAvroRecord = new GenericData.Record(readerSchema);
             converter = AvroToRowDataConverters.createRowConverter(ROW_TYPE);
         }
 

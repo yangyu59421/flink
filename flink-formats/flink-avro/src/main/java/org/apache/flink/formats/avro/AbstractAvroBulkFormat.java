@@ -18,6 +18,7 @@
 
 package org.apache.flink.formats.avro;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
@@ -26,9 +27,7 @@ import org.apache.flink.connector.file.src.util.IteratorResultIterator;
 import org.apache.flink.connector.file.src.util.Pool;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.formats.avro.typeutils.AvroSchemaConverter;
 import org.apache.flink.formats.avro.utils.FSDataInputStreamWrapper;
-import org.apache.flink.table.types.logical.RowType;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -42,15 +41,16 @@ import java.io.IOException;
 import java.util.Iterator;
 
 /** Provides a {@link BulkFormat} for Avro records. */
+@Internal
 public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSplit>
         implements BulkFormat<T, SplitT> {
 
     private static final long serialVersionUID = 1L;
 
-    protected final RowType readerRowType;
+    protected final Schema readerSchema;
 
-    protected AbstractAvroBulkFormat(RowType readerRowType) {
-        this.readerRowType = readerRowType;
+    protected AbstractAvroBulkFormat(Schema readerSchema) {
+        this.readerSchema = readerSchema;
     }
 
     @Override
@@ -125,7 +125,6 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
 
         private DataFileReader<A> createReaderFromPath(Path path) throws IOException {
             FileSystem fileSystem = path.getFileSystem();
-            Schema readerSchema = AvroSchemaConverter.convertToSchema(readerRowType);
             DatumReader<A> datumReader = new GenericDatumReader<>(null, readerSchema);
             SeekableInput in =
                     new FSDataInputStreamWrapper(
@@ -145,8 +144,7 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
                         "Interrupted while waiting for the previous batch to be consumed", e);
             }
 
-            // actual reading happens here
-            if (reachEnd()) {
+            if (!readNextBlock()) {
                 pool.recycler().recycle(reuse);
                 return null;
             }
@@ -164,9 +162,10 @@ public abstract class AbstractAvroBulkFormat<A, T, SplitT extends FileSourceSpli
                     () -> pool.recycler().recycle(reuse));
         }
 
-        private boolean reachEnd() throws IOException {
-            // reading from file happens here, reader.hasNext will read the next block when needed
-            return !reader.hasNext() || reader.pastSync(end);
+        private boolean readNextBlock() throws IOException {
+            // read the next block with reader,
+            // returns true if a block is read and false if we reach the end of this split
+            return reader.hasNext() && !reader.pastSync(end);
         }
 
         @Override
