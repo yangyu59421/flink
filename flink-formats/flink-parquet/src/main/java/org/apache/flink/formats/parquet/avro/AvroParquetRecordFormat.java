@@ -20,7 +20,7 @@ package org.apache.flink.formats.parquet.avro;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.connector.file.src.reader.RecordFormat;
+import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 
@@ -38,7 +38,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 
 /** */
-public class AvroParquetRecordFormat implements RecordFormat<GenericRecord> {
+public class AvroParquetRecordFormat implements StreamFormat<GenericRecord> {
 
     private final transient Schema schema;
 
@@ -50,8 +50,8 @@ public class AvroParquetRecordFormat implements RecordFormat<GenericRecord> {
      * Creates a new reader to read avro {@link GenericRecord} from Parquet input stream.
      *
      * <p>Several wrapper classes haven be created to Flink abstraction become compatible with the
-     * parquet abstraction. Please refer to the inner classes {@link GenericRecordReader}, {@link
-     * ParquetInputFile}, {@link FSDataInputStreamAdapter} for details.
+     * parquet abstraction. Please refer to the inner classes {@link AvroParquetRecordReader},
+     * {@link ParquetInputFile}, {@link FSDataInputStreamAdapter} for details.
      */
     @Override
     public Reader<GenericRecord> createReader(
@@ -61,7 +61,7 @@ public class AvroParquetRecordFormat implements RecordFormat<GenericRecord> {
         // current version does not support splitting.
         checkNotSplit(fileLen, splitEnd);
 
-        return new GenericRecordReader(
+        return new AvroParquetRecordReader(
                 AvroParquetReader.<GenericRecord>builder(new ParquetInputFile(stream, fileLen))
                         .withDataModel(GenericData.get())
                         .build());
@@ -69,7 +69,7 @@ public class AvroParquetRecordFormat implements RecordFormat<GenericRecord> {
 
     /**
      * Restores the reader from a checkpointed position. Since current version does not support
-     * splitting,
+     * splitting, {@code restoredOffset} will used for seeking.
      */
     @Override
     public Reader<GenericRecord> restoreReader(
@@ -115,14 +115,14 @@ public class AvroParquetRecordFormat implements RecordFormat<GenericRecord> {
     }
 
     /**
-     * {@link RecordFormat.Reader} implementation. Using {@link ParquetReader} internally to read
+     * {@link StreamFormat.Reader} implementation. Using {@link ParquetReader} internally to read
      * avro {@link GenericRecord} from parquet {@link InputFile}.
      */
-    private static class GenericRecordReader implements RecordFormat.Reader<GenericRecord> {
+    private static class AvroParquetRecordReader implements StreamFormat.Reader<GenericRecord> {
 
         private final ParquetReader<GenericRecord> parquetReader;
 
-        private GenericRecordReader(ParquetReader<GenericRecord> parquetReader) {
+        private AvroParquetRecordReader(ParquetReader<GenericRecord> parquetReader) {
             this.parquetReader = parquetReader;
         }
 

@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit test for {@link AvroParquetRecordFormat} and {@link
- * org.apache.flink.connector.file.src.reader.RecordFormat}.
+ * org.apache.flink.connector.file.src.reader.StreamFormat}.
  */
 class AvroParquetRecordFormatTest {
 
@@ -143,7 +143,7 @@ class AvroParquetRecordFormatTest {
     }
 
     @Test
-    void testRestoreReader() throws IOException {
+    void testReadWithRestoredReader() throws IOException {
         StreamFormat.Reader<GenericRecord> reader =
                 new AvroParquetRecordFormat(schema)
                         .restoreReader(
