@@ -27,12 +27,18 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.core.fs.FileStatus;
+import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.fs.Path;
 
 import javax.annotation.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * A reader format that reads individual records from a stream.
@@ -41,7 +47,10 @@ import java.io.Serializable;
  * reader. The actual reading is done by the {@link StreamFormat.Reader}, which is created based on
  * an input stream in the {@link #createReader(Configuration, FSDataInputStream, long, long)} method
  * and restored (from checkpointed positions) in the method {@link #restoreReader(Configuration,
- * FSDataInputStream, long, long, long)}.
+ * FSDataInputStream, long, long, long)}. For cases where the readers need access to the {@link
+ * Path} directly or need to create a custom stream, please refer to {@link
+ * #createReader(Configuration, Path, long, long)} and {@link #restoreReader(Configuration, Path,
+ * long, long, long)}.
  *
  * <p>Compared to the {@link BulkFormat}, the stream format handles a few things out-of-the-box,
  * like deciding how to batch records or dealing with compression.
@@ -156,6 +165,93 @@ public interface StreamFormat<T> extends Serializable, ResultTypeQueryable<T> {
             long fileLen,
             long splitEnd)
             throws IOException;
+
+    /**
+     * Creates a new reader to read in this format. This method is called when a fresh reader is
+     * created for a split that was assigned from the enumerator. This method may also be called on
+     * recovery from a checkpoint, if the reader never stored an offset in the checkpoint (see
+     * {@link #restoreReader(Configuration, Path, long, long, long)} for details.
+     *
+     * <p>Provide the default implementation, subclasses are therefore not forced to implement it.
+     * Compare to the {@link #createReader(Configuration, FSDataInputStream, long, long)}, This
+     * method put the focus on the {@link Path}. The default implementation adapts information given
+     * by method arguments to {@link FSDataInputStream} and calls {@link
+     * #createReader(Configuration, FSDataInputStream, long, long)}.
+     *
+     * <p>If the format is {@link #isSplittable() splittable}, then the {@code inputStream} is
+     * positioned to the beginning of the file split, otherwise it will be at position zero.
+     */
+    default StreamFormat.Reader<T> createReader(
+            Configuration config, Path filePath, long splitOffset, long splitLength)
+            throws IOException {
+
+        checkNotNull(filePath, "filePath");
+
+        final FileSystem fileSystem = filePath.getFileSystem();
+        final FileStatus fileStatus = fileSystem.getFileStatus(filePath);
+        final FSDataInputStream inputStream = fileSystem.open(filePath);
+
+        if (isSplittable()) {
+            inputStream.seek(splitOffset);
+        } else {
+            inputStream.seek(0);
+            checkArgument(splitLength == fileStatus.getLen());
+        }
+
+        return createReader(config, inputStream, fileStatus.getLen(), splitOffset + splitLength);
+    }
+
+    /**
+     * Restores a reader from a checkpointed position. This method is called when the reader is
+     * recovered from a checkpoint and the reader has previously stored an offset into the
+     * checkpoint, by returning from the {@link StreamFormat.Reader#getCheckpointedPosition()} a
+     * value with non-negative {@link CheckpointedPosition#getOffset() offset}. That value is
+     * supplied as the {@code restoredOffset}.
+     *
+     * <p>If the reader never produced a {@code CheckpointedPosition} with a non-negative offset
+     * before, then this method is not called, and the reader is created in the same way as a fresh
+     * reader via the method {@link #createReader(Configuration, Path, long, long)} and the
+     * appropriate number of records are read and discarded, to position to reader to the
+     * checkpointed position.
+     *
+     * <p>Provide the default implementation, subclasses are therefore not forced to implement it.
+     * Compare to the {@link #restoreReader(Configuration, FSDataInputStream, long, long, long)},
+     * This method put the focus on the {@link Path}. For valid {@code restoredOffset}, the default
+     * implementation adapts information supplied by method arguments to {@link FSDataInputStream}
+     * and delegates the call to {@link #restoreReader(Configuration, FSDataInputStream, long, long,
+     * long)}.
+     */
+    default StreamFormat.Reader<T> restoreReader(
+            Configuration config,
+            Path filePath,
+            long restoredOffset,
+            long splitOffset,
+            long splitLength)
+            throws IOException {
+
+        checkArgument(
+                restoredOffset >= 0,
+                "This method can be only called "
+                        + "when the supplied restoredOffset has a non-negative value. ");
+
+        final FileSystem fileSystem = filePath.getFileSystem();
+        final FileStatus fileStatus = fileSystem.getFileStatus(filePath);
+        final FSDataInputStream inputStream = fileSystem.open(filePath);
+
+        if (isSplittable()) {
+            inputStream.seek(splitOffset);
+        } else {
+            inputStream.seek(0);
+            checkArgument(splitLength == fileStatus.getLen());
+        }
+
+        return restoreReader(
+                config,
+                inputStream,
+                restoredOffset,
+                fileStatus.getLen(),
+                splitOffset + splitLength);
+    }
 
     /**
      * Checks whether this format is splittable. Splittable formats allow Flink to create multiple
