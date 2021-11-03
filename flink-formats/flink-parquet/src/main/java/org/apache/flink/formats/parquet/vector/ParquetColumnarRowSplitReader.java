@@ -18,7 +18,6 @@
 
 package org.apache.flink.formats.parquet.vector;
 
-import org.apache.flink.formats.parquet.vector.reader.AbstractColumnReader;
 import org.apache.flink.formats.parquet.vector.reader.ColumnReader;
 import org.apache.flink.table.data.ColumnarRowData;
 import org.apache.flink.table.data.vector.ColumnVector;
@@ -138,7 +137,7 @@ public class ParquetColumnarRowSplitReader implements Closeable {
         this.rowsInBatch = 0;
         this.rowsReturned = 0;
 
-        checkSchema();
+        // checkSchema();
 
         this.writableVectors = createWritableVectors();
         this.columnarBatch = generator.generate(createReadableVectors());
@@ -186,12 +185,15 @@ public class ParquetColumnarRowSplitReader implements Closeable {
 
     private WritableColumnVector[] createWritableVectors() {
         WritableColumnVector[] columns = new WritableColumnVector[selectedTypes.length];
+        List<Type> types = requestedSchema.getFields();
         for (int i = 0; i < selectedTypes.length; i++) {
             columns[i] =
                     createWritableColumnVector(
                             batchSize,
                             selectedTypes[i],
-                            requestedSchema.getColumns().get(i).getPrimitiveType());
+                            types.get(i),
+                            requestedSchema.getColumns(),
+                            0);
         }
         return columns;
     }
@@ -314,15 +316,17 @@ public class ParquetColumnarRowSplitReader implements Closeable {
                             + " out of "
                             + totalRowCount);
         }
-        List<ColumnDescriptor> columns = requestedSchema.getColumns();
-        columnReaders = new AbstractColumnReader[columns.size()];
-        for (int i = 0; i < columns.size(); ++i) {
+        List<Type> types = requestedSchema.getFields();
+        columnReaders = new ColumnReader[types.size()];
+        for (int i = 0; i < types.size(); ++i) {
             columnReaders[i] =
                     createColumnReader(
                             utcTimestamp,
                             selectedTypes[i],
-                            columns.get(i),
-                            pages.getPageReader(columns.get(i)));
+                            types.get(i),
+                            requestedSchema.getColumns(),
+                            pages,
+                            0);
         }
         totalCountLoadedSoFar += pages.getRowCount();
     }
