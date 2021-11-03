@@ -100,6 +100,11 @@ public class PipelinedSubpartitionView implements ResultSubpartitionView {
     }
 
     @Override
+    public long unsynchronizedGetSizeOfQueuedBuffers() {
+        return parent.unsynchronizedGetSizeOfQueuedBuffers();
+    }
+
+    @Override
     public int getNumberOfQueuedBuffers() {
         return parent.getNumberOfQueuedBuffers();
     }

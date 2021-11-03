@@ -462,6 +462,24 @@ public class SingleInputGate extends IndexedInputGate {
         return 0;
     }
 
+    public long getSizeOfQueuedBuffers() {
+        // re-try 3 times, if fails, return 0 for "unknown"
+        for (int retry = 0; retry < 3; retry++) {
+            try {
+                long totalSize = 0;
+
+                for (InputChannel channel : inputChannels.values()) {
+                    totalSize += channel.unsynchronizedGetSizeOfQueuedBuffers();
+                }
+
+                return totalSize;
+            } catch (Exception ignored) {
+            }
+        }
+
+        return 0;
+    }
+
     public CompletableFuture<Void> getCloseFuture() {
         return closeFuture;
     }

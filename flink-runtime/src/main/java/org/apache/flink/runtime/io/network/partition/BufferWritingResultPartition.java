@@ -112,6 +112,17 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
     }
 
     @Override
+    public long getSizeOfQueuedBuffers() {
+        long totalNumberOfBytes = 0;
+
+        for (ResultSubpartition subpartition : subpartitions) {
+            totalNumberOfBytes += Math.max(0, subpartition.getTotalNumberOfBytes());
+        }
+
+        return numBytesOut.getCount() - totalNumberOfBytes;
+    }
+
+    @Override
     public int getNumberOfQueuedBuffers(int targetSubpartition) {
         checkArgument(targetSubpartition >= 0 && targetSubpartition < numSubpartitions);
         return subpartitions[targetSubpartition].unsynchronizedGetNumberOfQueuedBuffers();

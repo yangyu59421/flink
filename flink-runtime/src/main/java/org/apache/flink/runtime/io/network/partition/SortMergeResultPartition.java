@@ -492,6 +492,11 @@ public class SortMergeResultPartition extends ResultPartition {
     }
 
     @Override
+    public long getSizeOfQueuedBuffers() {
+        return 0;
+    }
+
+    @Override
     public int getNumberOfQueuedBuffers(int targetSubpartition) {
         return 0;
     }

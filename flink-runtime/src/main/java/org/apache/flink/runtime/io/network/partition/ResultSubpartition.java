@@ -106,6 +106,12 @@ public abstract class ResultSubpartition {
      */
     public abstract int unsynchronizedGetNumberOfQueuedBuffers();
 
+    /**
+     * Makes the best effort to get the current size of the queue in bytes. This method must not
+     * acquire locks or interfere with the task and network threads in any way.
+     */
+    public abstract long unsynchronizedGetSizeOfQueuedBuffers();
+
     /** Get the current size of the queue. */
     public abstract int getNumberOfQueuedBuffers();
 

@@ -68,6 +68,8 @@ class SortMergeSubpartitionReader
     /** Sequence number of the next buffer to be sent to the consumer. */
     private int sequenceNumber;
 
+    private long totalBuffersSize;
+
     SortMergeSubpartitionReader(
             BufferAvailabilityListener listener, PartitionedFileReader fileReader) {
         this.availabilityListener = checkNotNull(listener);
@@ -86,6 +88,7 @@ class SortMergeSubpartitionReader
             if (buffer.isBuffer()) {
                 --dataBufferBacklog;
             }
+            totalBuffersSize -= buffer.getSize();
 
             Buffer lookAhead = buffersRead.peek();
             return BufferAndBacklog.fromBufferAndLookahead(
@@ -110,6 +113,7 @@ class SortMergeSubpartitionReader
             if (buffer.isBuffer()) {
                 ++dataBufferBacklog;
             }
+            totalBuffersSize += buffer.getSize();
         }
 
         if (notifyAvailable) {
@@ -234,6 +238,11 @@ class SortMergeSubpartitionReader
     @Override
     public int unsynchronizedGetNumberOfQueuedBuffers() {
         return Math.max(0, buffersRead.size());
+    }
+
+    @Override
+    public long unsynchronizedGetSizeOfQueuedBuffers() {
+        return Math.max(0, totalBuffersSize);
     }
 
     @Override

@@ -822,6 +822,67 @@ public class ResultPartitionTest {
         assertEquals(bufferSize, subpartition1.pollBuffer().buffer().getSize());
     }
 
+    @Test
+    public void testSizeOfQueuedBuffers() throws IOException {
+        // given: Configured pipelined result with 2 subpartitions.
+        BufferWritingResultPartition bufferWritingResultPartition =
+                createResultPartition(ResultPartitionType.PIPELINED);
+
+        ResultSubpartition[] subpartitions = bufferWritingResultPartition.subpartitions;
+        assertEquals(2, subpartitions.length);
+
+        PipelinedSubpartition subpartition0 = (PipelinedSubpartition) subpartitions[0];
+        PipelinedSubpartition subpartition1 = (PipelinedSubpartition) subpartitions[1];
+
+        // and: Set the buffers size.
+        subpartition0.bufferSize(10);
+        subpartition1.bufferSize(10);
+
+        // when: Emit different records into different subpartitions.
+        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(3), 0);
+        // Since the buffer has not finished the size should not be changed.
+        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(10), 0);
+        assertEquals(10, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(3), 1);
+        assertEquals(10, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(10), 1);
+        assertEquals(20, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        bufferWritingResultPartition.broadcastEvent(EndOfPartitionEvent.INSTANCE, false);
+        // The previous buffers should be finished but size of event should be ignored.
+        assertEquals(26, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(5), 0);
+        assertEquals(26, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        // when: Poll buffers.
+        assertEquals(10, subpartition0.pollBuffer().buffer().getSize());
+        assertEquals(16, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        assertEquals(10, subpartition1.pollBuffer().buffer().getSize());
+        assertEquals(6, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        assertEquals(3, subpartition0.pollBuffer().buffer().getSize());
+        assertEquals(3, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        assertEquals(3, subpartition1.pollBuffer().buffer().getSize());
+        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        // Poll the event.
+        assertEquals(4, subpartition0.pollBuffer().buffer().getSize());
+        // The size should not be changed since the size of event should be ignored.
+        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+
+        // Poll the unfinished buffer.
+        assertEquals(5, subpartition0.pollBuffer().buffer().getSize());
+        // The size can be negative since the size is increasing only when we finish the buffer.
+        assertEquals(-5, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+    }
+
     private static class TestResultPartitionConsumableNotifier
             implements ResultPartitionConsumableNotifier {
         private JobID jobID;

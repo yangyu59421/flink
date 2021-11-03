@@ -498,6 +498,12 @@ public class PipelinedSubpartition extends ResultSubpartition
     }
 
     @Override
+    public long unsynchronizedGetSizeOfQueuedBuffers() {
+        // Pretty rough approximation of real queue size.
+        return Math.max(unsynchronizedGetNumberOfQueuedBuffers() * bufferSize, 0);
+    }
+
+    @Override
     public void flush() {
         final boolean notifyDataAvailable;
         synchronized (buffers) {
@@ -535,7 +541,9 @@ public class PipelinedSubpartition extends ResultSubpartition
     }
 
     private void updateStatistics(Buffer buffer) {
-        totalNumberOfBytes += buffer.getSize();
+        if (buffer.isBuffer()) {
+            totalNumberOfBytes += buffer.getSize();
+        }
     }
 
     @GuardedBy("buffers")
