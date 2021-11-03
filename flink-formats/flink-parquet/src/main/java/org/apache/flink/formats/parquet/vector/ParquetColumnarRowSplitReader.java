@@ -137,7 +137,7 @@ public class ParquetColumnarRowSplitReader implements Closeable {
         this.rowsInBatch = 0;
         this.rowsReturned = 0;
 
-        // checkSchema();
+        checkSchema();
 
         this.writableVectors = createWritableVectors();
         this.columnarBatch = generator.generate(createReadableVectors());
@@ -223,11 +223,6 @@ public class ParquetColumnarRowSplitReader implements Closeable {
          * Check that the requested schema is supported.
          */
         for (int i = 0; i < requestedSchema.getFieldCount(); ++i) {
-            Type t = requestedSchema.getFields().get(i);
-            if (!t.isPrimitive() || t.isRepetition(Type.Repetition.REPEATED)) {
-                throw new UnsupportedOperationException("Complex types not supported.");
-            }
-
             String[] colPath = requestedSchema.getPaths().get(i);
             if (fileSchema.containsPath(colPath)) {
                 ColumnDescriptor fd = fileSchema.getColumnDescription(colPath);

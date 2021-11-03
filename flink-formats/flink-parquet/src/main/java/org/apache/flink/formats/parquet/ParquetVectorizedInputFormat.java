@@ -137,7 +137,7 @@ public abstract class ParquetVectorizedInputFormat<T, SplitT extends FileSourceS
             totalRowCount += block.getRowCount();
         }
 
-        // checkSchema(fileSchema, requestedSchema);
+        checkSchema(fileSchema, requestedSchema);
 
         final Pool<ParquetReaderBatch<T>> poolOfBatches =
                 createPoolOfBatches(split, requestedSchema, numBatchesToCirculate(config));
@@ -234,11 +234,6 @@ public abstract class ParquetVectorizedInputFormat<T, SplitT extends FileSourceS
          * Check that the requested schema is supported.
          */
         for (int i = 0; i < requestedSchema.getFieldCount(); ++i) {
-            Type t = requestedSchema.getFields().get(i);
-            if (!t.isPrimitive() || t.isRepetition(Type.Repetition.REPEATED)) {
-                throw new UnsupportedOperationException("Complex types not supported.");
-            }
-
             String[] colPath = requestedSchema.getPaths().get(i);
             if (fileSchema.containsPath(colPath)) {
                 ColumnDescriptor fd = fileSchema.getColumnDescription(colPath);
