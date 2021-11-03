@@ -24,15 +24,8 @@ import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.DelimitedFormat;
 import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.runtime.minicluster.RpcServiceSharing;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
-
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.CsvMapper;
-
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.CsvSchema;
-
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -46,9 +39,7 @@ import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TestLogger;
 import org.apache.flink.util.function.FunctionWithException;
-
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
@@ -76,20 +67,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /** MiniCluster-based integration test for reading CSV data from {@link FileSource}. */
-public class FileSourceCsvITCase extends TestLogger {
+public class CsvFormatITCase extends TestLogger {
 
     private static final int PARALLELISM = 4;
 
     @ClassRule public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
-    @Rule
-    public final MiniClusterWithClientResource miniClusterResource =
+    //    @ClassRule
+    public static final MiniClusterWithClientResource miniClusterResource =
             new MiniClusterWithClientResource(
                     new MiniClusterResourceConfiguration.Builder()
                             .setNumberTaskManagers(1)
                             .setNumberSlotsPerTaskManager(PARALLELISM)
-                            .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
-                            .withHaLeadershipControl()
                             .build());
 
     // ------------------------------------------------------------------------
@@ -157,49 +146,58 @@ public class FileSourceCsvITCase extends TestLogger {
     }
 
     @Test
-    public void testBoundedTextFileSourceWithJackson() throws Exception {
+    public void testBoundedTextFileSourceWithJacksonAsPojo() throws Exception {
         final File testDir = TMP_FOLDER.newFolder();
         writeFile(testDir, "data.csv", CSV_LINES);
-        
-        CsvMapper mapper = new CsvMapper();
-        CsvSchema csvSchema = mapper.schemaFor(CitiesPojo.class);
-        final ObjectReader reader = mapper.readerFor(CitiesPojo.class).with(csvSchema);
 
-        final CsvStreamFormat<CitiesPojo> csvFormat = CsvStreamFormat.from(reader, CitiesPojo.class);
+        final CsvFormat<CitiesPojo> csvFormat = CsvFormat.toPojo(CitiesPojo.class);
         final List<CitiesPojo> result = initializeSourceAndReadData(testDir, csvFormat);
 
-        final CitiesPojo[] expected = new CitiesPojo[]{
-                new CitiesPojo( "Berlin",
-                        new BigDecimal("52.5167"),
-                        new BigDecimal("13.3833"),
-                        "Germany",
-                        "DE",
-                        "Berlin",
-                        "primary",
-                        3644826L),
-                new CitiesPojo("San Francisco",
-                        new BigDecimal("37.7562"),
-                        new BigDecimal("-122.4430"),
-                        "United States",
-                        "US",
-                        "California",
-                        "",
-                        3592294L),
-                new CitiesPojo(  "Beijing",
-                        new BigDecimal("39.9050"),
-                        new BigDecimal("116.3914"),
-                        "China",
-                        "CN",
-                        "Beijing",
-                        "primary",
-                        19433000L)
-        };
+        final CitiesPojo[] expected =
+                new CitiesPojo[] {
+                    new CitiesPojo(
+                            "Berlin",
+                            new BigDecimal("52.5167"),
+                            new BigDecimal("13.3833"),
+                            "Germany",
+                            "DE",
+                            "Berlin",
+                            "primary",
+                            3644826L),
+                    new CitiesPojo(
+                            "San Francisco",
+                            new BigDecimal("37.7562"),
+                            new BigDecimal("-122.4430"),
+                            "United States",
+                            "US",
+                            "California",
+                            "",
+                            3592294L),
+                    new CitiesPojo(
+                            "Beijing",
+                            new BigDecimal("39.9050"),
+                            new BigDecimal("116.3914"),
+                            "China",
+                            "CN",
+                            "Beijing",
+                            "primary",
+                            19433000L)
+                };
 
         assertEquals(Arrays.asList(expected), result);
     }
 
-    @JsonPropertyOrder({ "city", "lat", "lng", "country", "iso2", "adminName", "capital", "population"})
-    public static class CitiesPojo{
+    @JsonPropertyOrder({
+        "city",
+        "lat",
+        "lng",
+        "country",
+        "iso2",
+        "adminName",
+        "capital",
+        "population"
+    })
+    public static class CitiesPojo {
         public String city;
         public BigDecimal lat;
         public BigDecimal lng;
@@ -209,7 +207,7 @@ public class FileSourceCsvITCase extends TestLogger {
         public String capital;
         public long population;
 
-        public CitiesPojo(){};
+        public CitiesPojo() {};
 
         public CitiesPojo(
                 String city,
@@ -230,19 +228,32 @@ public class FileSourceCsvITCase extends TestLogger {
             this.population = population;
         }
 
-    @Override
-    public String toString() {
-        return "CitiesPojo{" +
-                "city='" + city + '\'' +
-                ", lat=" + lat +
-                ", lng=" + lng +
-                ", country='" + country + '\'' +
-                ", iso2='" + iso2 + '\'' +
-                ", adminName='" + adminName + '\'' +
-                ", capital='" + capital + '\'' +
-                ", population=" + population +
-                '}';
-    }
+        @Override
+        public String toString() {
+            return "CitiesPojo{"
+                    + "city='"
+                    + city
+                    + '\''
+                    + ", lat="
+                    + lat
+                    + ", lng="
+                    + lng
+                    + ", country='"
+                    + country
+                    + '\''
+                    + ", iso2='"
+                    + iso2
+                    + '\''
+                    + ", adminName='"
+                    + adminName
+                    + '\''
+                    + ", capital='"
+                    + capital
+                    + '\''
+                    + ", population="
+                    + population
+                    + '}';
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -253,12 +264,14 @@ public class FileSourceCsvITCase extends TestLogger {
                 return false;
             }
             CitiesPojo that = (CitiesPojo) o;
-            return population == that.population && Objects.equals(city, that.city)
-                    && Objects.equals(lat, that.lat) && Objects.equals(lng, that.lng)
-                    && Objects.equals(country, that.country) && Objects.equals(iso2, that.iso2)
-                    && Objects.equals(adminName, that.adminName) && Objects.equals(
-                    capital,
-                    that.capital);
+            return population == that.population
+                    && Objects.equals(city, that.city)
+                    && Objects.equals(lat, that.lat)
+                    && Objects.equals(lng, that.lng)
+                    && Objects.equals(country, that.country)
+                    && Objects.equals(iso2, that.iso2)
+                    && Objects.equals(adminName, that.adminName)
+                    && Objects.equals(capital, that.capital);
         }
 
         @Override
@@ -267,8 +280,8 @@ public class FileSourceCsvITCase extends TestLogger {
         }
     }
 
-    private static <T> List<T> initializeSourceAndReadData(
-            File testDir, StreamFormat<T> csvFormat) throws Exception {
+    private static <T> List<T> initializeSourceAndReadData(File testDir, StreamFormat<T> csvFormat)
+            throws Exception {
         final FileSource<T> source =
                 FileSource.forRecordStreamFormat(csvFormat, Path.fromLocalFile(testDir)).build();
 
@@ -314,9 +327,9 @@ public class FileSourceCsvITCase extends TestLogger {
 
     private static final String[] CSV_LINES =
             new String[] {
-                    "Berlin,52.5167,13.3833,Germany,DE,Berlin,primary,3644826",
-                    "San Francisco,37.7562,-122.4430,United States,US,California,,3592294",
-                    "Beijing,39.9050,116.3914,China,CN,Beijing,primary,19433000"
+                "Berlin,52.5167,13.3833,Germany,DE,Berlin,primary,3644826",
+                "San Francisco,37.7562,-122.4430,United States,US,California,,3592294",
+                "Beijing,39.9050,116.3914,China,CN,Beijing,primary,19433000"
             };
 
     private static void writeFile(File testDir, String fileName, String[] lines)
