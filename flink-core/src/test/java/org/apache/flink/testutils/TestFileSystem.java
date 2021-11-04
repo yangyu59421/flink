@@ -19,15 +19,18 @@
 package org.apache.flink.testutils;
 
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystemFactory;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.core.fs.local.LocalDataOutputStream;
 import org.apache.flink.core.fs.local.LocalFileStatus;
 import org.apache.flink.core.fs.local.LocalFileSystem;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A test file system. This also has a service entry in the test resources, to be loaded during
@@ -37,26 +40,43 @@ public class TestFileSystem extends LocalFileSystem {
 
     public static final String SCHEME = "test";
 
-    private static int streamOpenCounter;
+    // number of (input) stream opened
+    private static final AtomicInteger streamOpenCounter = new AtomicInteger(0);
+
+    // current number of created, unclosed (output) stream
+    private static final AtomicInteger currentUnclosedOutputStream = new AtomicInteger(0);
 
     public static int getNumtimeStreamOpened() {
-        return streamOpenCounter;
+        return streamOpenCounter.get();
     }
 
-    public static void resetStreamOpenCounter() {
-        streamOpenCounter = 0;
+    public static int getCurrentUnclosedOutputStream() {
+        return currentUnclosedOutputStream.get();
+    }
+
+    public static void resetStreamCounter() {
+        streamOpenCounter.set(0);
+        currentUnclosedOutputStream.set(0);
     }
 
     @Override
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-        streamOpenCounter++;
+        streamOpenCounter.incrementAndGet();
         return super.open(f, bufferSize);
     }
 
     @Override
     public FSDataInputStream open(Path f) throws IOException {
-        streamOpenCounter++;
+        streamOpenCounter.incrementAndGet();
         return super.open(f);
+    }
+
+    @Override
+    public FSDataOutputStream create(final Path filePath, final WriteMode overwrite)
+            throws IOException {
+        currentUnclosedOutputStream.incrementAndGet();
+        LocalDataOutputStream stream = (LocalDataOutputStream) super.create(filePath, overwrite);
+        return new TestOutputStream(stream);
     }
 
     @Override
@@ -78,6 +98,48 @@ public class TestFileSystem extends LocalFileSystem {
     @Override
     public URI getUri() {
         return URI.create(SCHEME + ":///");
+    }
+
+    // ------------------------------------------------------------------------
+
+    private static final class TestOutputStream extends FSDataOutputStream {
+
+        private final LocalDataOutputStream stream;
+
+        private TestOutputStream(LocalDataOutputStream stream) {
+            this.stream = stream;
+        }
+
+        @Override
+        public long getPos() throws IOException {
+            return stream.getPos();
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            stream.write(b);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            stream.write(b, off, len);
+        }
+
+        @Override
+        public void flush() throws IOException {
+            stream.flush();
+        }
+
+        @Override
+        public void sync() throws IOException {
+            stream.sync();
+        }
+
+        @Override
+        public void close() throws IOException {
+            currentUnclosedOutputStream.decrementAndGet();
+            stream.close();
+        }
     }
 
     // ------------------------------------------------------------------------

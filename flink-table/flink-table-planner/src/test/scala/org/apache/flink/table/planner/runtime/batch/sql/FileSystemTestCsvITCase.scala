@@ -18,6 +18,11 @@
 
 package org.apache.flink.table.planner.runtime.batch.sql
 
+import org.apache.flink.testutils.TestFileSystem
+
+import org.junit.After
+import org.junit.Assert.assertEquals
+
 /**
   * Test for file system table factory with testcsv format.
   */
@@ -25,5 +30,19 @@ class FileSystemTestCsvITCase extends BatchFileSystemITCaseBase {
 
   override def formatProperties(): Array[String] = {
     super.formatProperties() ++ Seq("'format' = 'testcsv'")
+  }
+
+  override def getScheme: String = "test"
+
+  @After
+  def close(): Unit = {
+    try {
+      assertEquals(
+        "There are unclosed file output stream",
+        0,
+        TestFileSystem.getCurrentUnclosedOutputStream)
+    } finally {
+      TestFileSystem.resetStreamCounter()
+    }
   }
 }

@@ -105,7 +105,7 @@ public class DelimitedInputFormatSamplingTest {
             format.setFilePath(tempFile.replace("file", "test"));
             format.configure(conf);
 
-            TestFileSystem.resetStreamOpenCounter();
+            TestFileSystem.resetStreamCounter();
             format.getStatistics(null);
             Assert.assertEquals(
                     "Wrong number of samples taken.",
@@ -117,7 +117,7 @@ public class DelimitedInputFormatSamplingTest {
             format2.setNumLineSamples(8);
             format2.configure(conf);
 
-            TestFileSystem.resetStreamOpenCounter();
+            TestFileSystem.resetStreamCounter();
             format2.getStatistics(null);
             Assert.assertEquals(
                     "Wrong number of samples taken.", 8, TestFileSystem.getNumtimeStreamOpened());
@@ -140,7 +140,7 @@ public class DelimitedInputFormatSamplingTest {
             format.setFilePath(tempFile.replace("file", "test"));
             format.configure(conf);
 
-            TestFileSystem.resetStreamOpenCounter();
+            TestFileSystem.resetStreamCounter();
             format.getStatistics(null);
             Assert.assertEquals(
                     "Wrong number of samples taken.",
@@ -152,7 +152,7 @@ public class DelimitedInputFormatSamplingTest {
             format2.setNumLineSamples(8);
             format2.configure(conf);
 
-            TestFileSystem.resetStreamOpenCounter();
+            TestFileSystem.resetStreamCounter();
             format2.getStatistics(null);
             Assert.assertEquals(
                     "Wrong number of samples taken.", 8, TestFileSystem.getNumtimeStreamOpened());
@@ -303,7 +303,7 @@ public class DelimitedInputFormatSamplingTest {
             format.setFilePath("test://" + tempFile);
             format.configure(conf);
 
-            TestFileSystem.resetStreamOpenCounter();
+            TestFileSystem.resetStreamCounter();
             BaseStatistics stats = format.getStatistics(null);
             Assert.assertEquals(
                     "Wrong number of samples taken.",
@@ -314,7 +314,7 @@ public class DelimitedInputFormatSamplingTest {
             format2.setFilePath("test://" + tempFile);
             format2.configure(conf);
 
-            TestFileSystem.resetStreamOpenCounter();
+            TestFileSystem.resetStreamCounter();
             BaseStatistics stats2 = format2.getStatistics(stats);
             Assert.assertTrue(
                     "Using cached statistics should cicumvent sampling.",
