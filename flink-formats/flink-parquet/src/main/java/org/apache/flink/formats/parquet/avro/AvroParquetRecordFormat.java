@@ -18,32 +18,39 @@
 
 package org.apache.flink.formats.parquet.avro;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.src.reader.StreamFormat;
 import org.apache.flink.core.fs.FSDataInputStream;
-import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 
-import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.reflect.ReflectData;
+import org.apache.avro.specific.SpecificData;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 
 import java.io.IOException;
 
 /** */
-public class AvroParquetRecordFormat implements StreamFormat<GenericRecord> {
+public class AvroParquetRecordFormat<E> implements StreamFormat<E> {
 
-    private final transient Schema schema;
+    private static final long serialVersionUID = 1L;
 
-    public AvroParquetRecordFormat(Schema schema) {
-        this.schema = schema;
+    static final Logger LOG = LoggerFactory.getLogger(AvroParquetRecordFormat.class);
+
+    private final TypeInformation<E> type;
+
+    AvroParquetRecordFormat(TypeInformation<E> type) {
+        this.type = type;
     }
 
     /**
@@ -54,25 +61,37 @@ public class AvroParquetRecordFormat implements StreamFormat<GenericRecord> {
      * {@link ParquetInputFile}, {@link FSDataInputStreamAdapter} for details.
      */
     @Override
-    public Reader<GenericRecord> createReader(
+    public Reader<E> createReader(
             Configuration config, FSDataInputStream stream, long fileLen, long splitEnd)
             throws IOException {
 
         // current version does not support splitting.
         checkNotSplit(fileLen, splitEnd);
 
-        return new AvroParquetRecordReader(
-                AvroParquetReader.<GenericRecord>builder(new ParquetInputFile(stream, fileLen))
-                        .withDataModel(GenericData.get())
+        return new AvroParquetRecordReader<E>(
+                AvroParquetReader.<E>builder(new ParquetInputFile(stream, fileLen))
+                        .withDataModel(getDataModel())
                         .build());
+    }
+
+    @VisibleForTesting
+    GenericData getDataModel() {
+        Class<E> typeClass = getProducedType().getTypeClass();
+        if (org.apache.avro.specific.SpecificRecordBase.class.isAssignableFrom(typeClass)) {
+            return SpecificData.get();
+        } else if (org.apache.avro.generic.GenericRecord.class.isAssignableFrom(typeClass)) {
+            return GenericData.get();
+        } else {
+            return ReflectData.get();
+        }
     }
 
     /**
      * Restores the reader from a checkpointed position. Since current version does not support
-     * splitting, {@code restoredOffset} will used for seeking.
+     * splitting, {@code restoredOffset} will be used for seeking.
      */
     @Override
-    public Reader<GenericRecord> restoreReader(
+    public Reader<E> restoreReader(
             Configuration config,
             FSDataInputStream stream,
             long restoredOffset,
@@ -100,8 +119,8 @@ public class AvroParquetRecordFormat implements StreamFormat<GenericRecord> {
      * as a whole.
      */
     @Override
-    public TypeInformation<GenericRecord> getProducedType() {
-        return new GenericRecordAvroTypeInfo(schema);
+    public TypeInformation<E> getProducedType() {
+        return type;
     }
 
     private static void checkNotSplit(long fileLen, long splitEnd) {
@@ -118,17 +137,17 @@ public class AvroParquetRecordFormat implements StreamFormat<GenericRecord> {
      * {@link StreamFormat.Reader} implementation. Using {@link ParquetReader} internally to read
      * avro {@link GenericRecord} from parquet {@link InputFile}.
      */
-    private static class AvroParquetRecordReader implements StreamFormat.Reader<GenericRecord> {
+    private static class AvroParquetRecordReader<E> implements StreamFormat.Reader<E> {
 
-        private final ParquetReader<GenericRecord> parquetReader;
+        private final ParquetReader<E> parquetReader;
 
-        private AvroParquetRecordReader(ParquetReader<GenericRecord> parquetReader) {
+        private AvroParquetRecordReader(ParquetReader<E> parquetReader) {
             this.parquetReader = parquetReader;
         }
 
         @Nullable
         @Override
-        public GenericRecord read() throws IOException {
+        public E read() throws IOException {
             return parquetReader.read();
         }
 

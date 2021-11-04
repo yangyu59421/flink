@@ -98,7 +98,7 @@ class AvroParquetRecordFormatTest {
     @Test
     void testCreateReader() throws IOException {
         StreamFormat.Reader<GenericRecord> reader =
-                new AvroParquetRecordFormat(schema)
+                AvroParquetReaders.forGenericRecord(schema)
                         .createReader(
                                 new Configuration(),
                                 path,
@@ -115,7 +115,7 @@ class AvroParquetRecordFormatTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
-                        new AvroParquetRecordFormat(schema)
+                        AvroParquetReaders.forGenericRecord(schema)
                                 .createReader(new Configuration(), path, 5, 5));
     }
 
@@ -124,7 +124,7 @@ class AvroParquetRecordFormatTest {
         assertThrows(
                 NullPointerException.class,
                 () ->
-                        new AvroParquetRecordFormat(schema)
+                        AvroParquetReaders.forGenericRecord(schema)
                                 .createReader(new Configuration(), (Path) null, 0, 0));
     }
 
@@ -133,7 +133,7 @@ class AvroParquetRecordFormatTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
-                        new AvroParquetRecordFormat(schema)
+                        AvroParquetReaders.forGenericRecord(schema)
                                 .restoreReader(
                                         new Configuration(),
                                         path,
@@ -145,7 +145,7 @@ class AvroParquetRecordFormatTest {
     @Test
     void testReadWithRestoredReader() throws IOException {
         StreamFormat.Reader<GenericRecord> reader =
-                new AvroParquetRecordFormat(schema)
+                AvroParquetReaders.forGenericRecord(schema)
                         .restoreReader(
                                 new Configuration(),
                                 path,
@@ -166,7 +166,7 @@ class AvroParquetRecordFormatTest {
     @Test
     void testRestoreReaderWithOffset() throws IOException {
         StreamFormat.Reader<GenericRecord> reader =
-                new AvroParquetRecordFormat(schema)
+                AvroParquetReaders.forGenericRecord(schema)
                         .restoreReader(
                                 new Configuration(),
                                 path,
@@ -181,13 +181,13 @@ class AvroParquetRecordFormatTest {
 
     @Test
     void testSplittable() {
-        assertFalse(new AvroParquetRecordFormat(schema).isSplittable());
+        assertFalse(AvroParquetReaders.forGenericRecord(schema).isSplittable());
     }
 
     @Test
     void getProducedType() {
         assertEquals(
-                new AvroParquetRecordFormat(schema).getProducedType().getTypeClass(),
+                AvroParquetReaders.forGenericRecord(schema).getProducedType().getTypeClass(),
                 GenericRecord.class);
     }
 
