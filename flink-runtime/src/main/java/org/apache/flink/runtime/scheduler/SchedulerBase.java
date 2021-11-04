@@ -51,6 +51,9 @@ import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.executiongraph.JobStatusListener;
 import org.apache.flink.runtime.executiongraph.TaskExecutionStateTransition;
 import org.apache.flink.runtime.executiongraph.failover.flip1.ResultPartitionAvailabilityChecker;
+import org.apache.flink.runtime.executiongraph.metrics.DownTimeGauge;
+import org.apache.flink.runtime.executiongraph.metrics.RestartTimeGauge;
+import org.apache.flink.runtime.executiongraph.metrics.UpTimeGauge;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
@@ -585,6 +588,11 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
     }
 
     private void registerJobMetrics() {
+        jobManagerJobMetricGroup.gauge(
+                RestartTimeGauge.METRIC_NAME, new RestartTimeGauge(executionGraph));
+        jobManagerJobMetricGroup.gauge(
+                DownTimeGauge.METRIC_NAME, new DownTimeGauge(executionGraph));
+        jobManagerJobMetricGroup.gauge(UpTimeGauge.METRIC_NAME, new UpTimeGauge(executionGraph));
         jobManagerJobMetricGroup.gauge(MetricNames.NUM_RESTARTS, this::getNumberOfRestarts);
         jobManagerJobMetricGroup.gauge(MetricNames.FULL_RESTARTS, this::getNumberOfRestarts);
     }
