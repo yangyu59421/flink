@@ -153,6 +153,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1154,6 +1155,18 @@ public class StreamTaskTest extends TestLogger {
                 env ->
                         taskBuilderWithConfiguredRecordWriter(env)
                                 .setTaskManagerActions(taskManagerActions)
+                                .build());
+    }
+
+    @Test
+    public void testFailInEndOfConstructor() throws Exception {
+        HashMap<String, String> conf = new HashMap<>();
+        // Set the wrong setting type for forcing the fail during read.
+        conf.put(BUFFER_DEBLOAT_PERIOD.key(), "a");
+        testRecordWriterClosedOnError(
+                env ->
+                        taskBuilderWithConfiguredRecordWriter(env)
+                                .setTaskManagerConfig(Configuration.fromMap(conf))
                                 .build());
     }
 
