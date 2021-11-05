@@ -56,7 +56,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
@@ -178,12 +177,12 @@ public class ZooKeeperStateHandleStoreTest extends TestLogger {
         final long firstState = 1337L;
         final long secondState = 7331L;
         store.addAndLock(path, new TestingLongStateHandleHelper.LongStateHandle(firstState));
-        assertThrows(
-                StateHandleStore.AlreadyExistException.class,
-                () -> {
-                    store.addAndLock(
-                            path, new TestingLongStateHandleHelper.LongStateHandle(secondState));
-                });
+        try {
+            store.addAndLock(path, new TestingLongStateHandleHelper.LongStateHandle(secondState));
+            fail("Exception expected.");
+        } catch (StateHandleStore.AlreadyExistException e) {
+            // No-op.
+        }
         // There should be only single state handle from the first successful attempt.
         assertEquals(1, TestingLongStateHandleHelper.getGlobalStorageSize());
         assertEquals(firstState, TestingLongStateHandleHelper.getStateHandleValueByIndex(0));
