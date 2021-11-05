@@ -69,6 +69,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -576,6 +577,57 @@ public class PendingCheckpointTest {
         assertThat(
                 recordCheckpointPlan.getReportedOperatorsFinishedTasks(),
                 contains(ACK_TASKS.get(0).getVertex()));
+    }
+
+    /**
+     * We need to trigger disposal prior completing the checkpoint future to avoid a race condition
+     * with the CheckpointCleaner shutdown.
+     */
+    @Test
+    public void testAbortTriggersDisposalPriorCompletingCheckpointFuture() throws Exception {
+        final PendingCheckpoint pending =
+                createPendingCheckpoint(
+                        CheckpointProperties.forCheckpoint(
+                                CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION));
+        final CheckpointsCleaner cleaner = new CheckpointsCleaner();
+        final CompletableFuture<Void> completionFuture =
+                pending.getCompletionFuture()
+                        .handle(
+                                (result, error) -> {
+                                    assertNotNull(error);
+                                    assertTrue(pending.isDisposed());
+                                    return null;
+                                })
+                        .thenRun(cleaner::closeAsync);
+        pending.abort(
+                CheckpointFailureReason.CHECKPOINT_DECLINED,
+                null,
+                cleaner,
+                () -> {},
+                Executors.directExecutor(),
+                null);
+        completionFuture.get();
+    }
+
+    /**
+     * We need to trigger disposal prior completing the checkpoint future to avoid a race condition
+     * with the CheckpointCleaner shutdown.
+     */
+    @Test
+    public void testFinalizeTriggersDisposalPriorCompletingCheckpointFuture() throws Exception {
+        final PendingCheckpoint pending =
+                createPendingCheckpoint(
+                        CheckpointProperties.forCheckpoint(
+                                CheckpointRetentionPolicy.NEVER_RETAIN_AFTER_TERMINATION));
+        pending.acknowledgeTask(ATTEMPT_ID, null, new CheckpointMetrics(), null);
+        assertTrue(pending.areTasksFullyAcknowledged());
+        final CheckpointsCleaner cleaner = new CheckpointsCleaner();
+        final CompletableFuture<Void> completionFuture =
+                pending.getCompletionFuture()
+                        .thenAccept(ignored -> assertTrue(pending.isDisposed()))
+                        .thenRun(cleaner::closeAsync);
+        pending.finalizeCheckpoint(cleaner, () -> {}, Executors.directExecutor(), null);
+        completionFuture.get();
     }
 
     // ------------------------------------------------------------------------

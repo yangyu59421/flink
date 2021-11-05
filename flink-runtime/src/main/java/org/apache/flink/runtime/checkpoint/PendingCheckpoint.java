@@ -336,6 +336,8 @@ public class PendingCheckpoint implements Checkpoint {
                                 props,
                                 finalizedLocation);
 
+                // Mark this pending checkpoint as disposed, but do NOT drop the state.
+                dispose(false, checkpointsCleaner, postCleanup, executor);
                 onCompletionPromise.complete(completed);
 
                 if (statsCallback != null) {
@@ -353,10 +355,6 @@ public class PendingCheckpoint implements Checkpoint {
                                     finalizedLocation.getExternalPointer());
                     completed.setDiscardCallback(discardCallback);
                 }
-
-                // mark this pending checkpoint as disposed, but do NOT drop the state
-                dispose(false, checkpointsCleaner, postCleanup, executor);
-
                 return completed;
             } catch (Throwable t) {
                 onCompletionPromise.completeExceptionally(t);
@@ -541,14 +539,11 @@ public class PendingCheckpoint implements Checkpoint {
             Runnable postCleanup,
             Executor executor,
             PendingCheckpointStats statsCallback) {
-        try {
-            failureCause = new CheckpointException(reason, cause);
-            onCompletionPromise.completeExceptionally(failureCause);
-            reportFailedCheckpoint(failureCause, statsCallback);
-            assertAbortSubsumedForced(reason);
-        } finally {
-            dispose(true, checkpointsCleaner, postCleanup, executor);
-        }
+        failureCause = new CheckpointException(reason, cause);
+        dispose(true, checkpointsCleaner, postCleanup, executor);
+        onCompletionPromise.completeExceptionally(failureCause);
+        reportFailedCheckpoint(failureCause, statsCallback);
+        assertAbortSubsumedForced(reason);
     }
 
     private void assertAbortSubsumedForced(CheckpointFailureReason reason) {
