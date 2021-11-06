@@ -95,17 +95,15 @@ class StreamPhysicalSink(
         val insertOnly = tableSink
             .getChangelogMode(inputChangelogMode)
             .containsOnly(RowKind.INSERT)
-        val hasUB = tableSink
-            .getChangelogMode(inputChangelogMode)
-            .contains(RowKind.UPDATE_BEFORE)
 
-        if (!insertOnly && !hasUB && primaryKeys.nonEmpty) {
+        if (!insertOnly && primaryKeys.nonEmpty) {
           val columnNames = catalogTable.getResolvedSchema.getColumnNames
           val pks = ImmutableBitSet.of(primaryKeys.map(columnNames.indexOf): _*)
           val fmq = FlinkRelMetadataQuery.reuseOrCreate(getCluster.getMetadataQuery)
           val changeLogUpsertKeys = fmq.getUpsertKeys(getInput)
           // optimize: do not add materialization when sink pk(s) contains input changeLogUpsertKeys
-          if (changeLogUpsertKeys != null && !changeLogUpsertKeys.exists(pks.contains)) {
+          if (changeLogUpsertKeys != null && changeLogUpsertKeys.size() > 0 &&
+              !changeLogUpsertKeys.exists(pks.contains)) {
             true
           } else {
             false
