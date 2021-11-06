@@ -940,5 +940,34 @@ class RankTest extends TableTestBase {
     util.verifyExplainInsert(sql, ExplainDetail.CHANGELOG_MODE)
   }
 
+  @Test
+  def testRankOutputLostUpsertKeyWithSinkPk(): Unit = {
+    // test for FLINK-20370
+    util.tableEnv.executeSql(
+      """
+        |CREATE TABLE sink (
+        | a INT,
+        | c BIGINT,
+        | rn BIGINT,
+        | PRIMARY KEY (a) NOT ENFORCED
+        |) WITH (
+        | 'connector' = 'values'
+        | ,'sink-insert-only' = 'false'
+        |)
+        |""".stripMargin)
+
+    val sql =
+      """
+        |INSERT INTO sink
+        |SELECT a, c, rn FROM (
+        |  SELECT *, ROW_NUMBER() OVER (PARTITION BY b ORDER BY c DESC) AS rn
+        |  FROM MyTable
+        |  )
+        |WHERE rn <= 100
+        |""".stripMargin
+    // verify UB should reserve and add upsertMaterialize if rank outputs' lost upsert keys
+    util.verifyExplainInsert(sql, ExplainDetail.CHANGELOG_MODE)
+  }
+
   // TODO add tests about multi-sinks and udf
 }

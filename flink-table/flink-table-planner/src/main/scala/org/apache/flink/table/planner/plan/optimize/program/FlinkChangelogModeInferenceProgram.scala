@@ -446,11 +446,12 @@ class FlinkChangelogModeInferenceProgram extends FlinkOptimizeProgram[StreamOpti
             val sinkPks = ImmutableBitSet.of(sinkDefinedPks.map(sinkColumns.indexOf): _*)
             val fmq = FlinkRelMetadataQuery.reuseOrCreate(rel.getCluster.getMetadataQuery)
             val changeLogUpsertKeys = fmq.getUpsertKeys(sink.getInput)
-            // sink pk(s) contains input changeLogUpsertKeys can not be optimized to UA only,
+            // if input is UA only, primary key != upsert key (upsert key can be null) we should
+            // fallback to beforeAndAfter.
+            // Notice: even sink pk(s) contains input upsert key we cannot optimize to UA only,
             // this differs from batch job's unique key inference
-            if (changeLogUpsertKeys != null && !changeLogUpsertKeys.exists {
-              0 == _.compareTo(sinkPks)
-            }) {
+            if (changeLogUpsertKeys == null || changeLogUpsertKeys.size() == 0
+                || !changeLogUpsertKeys.exists {0 == _.compareTo(sinkPks)}) {
               shouldFallback = true
             }
           }

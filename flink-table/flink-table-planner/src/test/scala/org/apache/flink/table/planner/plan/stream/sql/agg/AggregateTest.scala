@@ -305,7 +305,7 @@ class AggregateTest extends TableTestBase {
         |CREATE TABLE sink (
         | id VARCHAR,
         | cnt BIGINT,
-        | PRIMARY KEY (id) NOT ENFORCED
+        | PRIMARY KEY (cnt) NOT ENFORCED
         |) WITH (
         | 'connector' = 'values'
         | ,'sink-insert-only' = 'false'
@@ -314,7 +314,7 @@ class AggregateTest extends TableTestBase {
     util.verifyExplainInsert(
       """
         |INSERT INTO sink
-        |SELECT c, COUNT(*) cnt FROM T GROUP BY a, c
+        |SELECT c, COUNT(*) cnt FROM T GROUP BY c
         |""".stripMargin, ExplainDetail.CHANGELOG_MODE)
   }
 
@@ -337,6 +337,29 @@ class AggregateTest extends TableTestBase {
       """
         |INSERT INTO sink
         |SELECT a, MAX(b) b, COUNT(*) cnt FROM T GROUP BY a
+        |""".stripMargin, ExplainDetail.CHANGELOG_MODE)
+  }
+
+  @Test
+  def testGroupResultLostUpsertKeyWithSinkPk(): Unit = {
+    // test for FLINK-20370
+    util.tableEnv.executeSql(
+      """
+        |CREATE TABLE sink (
+        | id VARCHAR,
+        | cnt BIGINT,
+        | PRIMARY KEY (id) NOT ENFORCED
+        |) WITH (
+        | 'connector' = 'values'
+        | ,'sink-insert-only' = 'false'
+        |)
+        |""".stripMargin)
+
+    // verify UB should reserve and add upsertMaterialize if group results lost upsert keys
+    util.verifyExplainInsert(
+      """
+        |INSERT INTO sink
+        |SELECT c, COUNT(*) cnt FROM T GROUP BY a, c
         |""".stripMargin, ExplainDetail.CHANGELOG_MODE)
   }
 }

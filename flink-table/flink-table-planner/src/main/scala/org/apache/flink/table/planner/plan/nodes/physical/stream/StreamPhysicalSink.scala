@@ -101,8 +101,10 @@ class StreamPhysicalSink(
           val pks = ImmutableBitSet.of(primaryKeys.map(columnNames.indexOf): _*)
           val fmq = FlinkRelMetadataQuery.reuseOrCreate(getCluster.getMetadataQuery)
           val changeLogUpsertKeys = fmq.getUpsertKeys(getInput)
-          // optimize: do not add materialization when sink pk(s) contains input changeLogUpsertKeys
-          if (changeLogUpsertKeys != null && changeLogUpsertKeys.size() > 0 &&
+          // if input has update and primary key != upsert key (upsert key can be null) we should
+          // enable upsertMaterialize. An optimize is: do not enable upsertMaterialize when sink
+          // pk(s) contains input changeLogUpsertKeys
+          if (changeLogUpsertKeys == null || changeLogUpsertKeys.size() == 0 ||
               !changeLogUpsertKeys.exists(pks.contains)) {
             true
           } else {
