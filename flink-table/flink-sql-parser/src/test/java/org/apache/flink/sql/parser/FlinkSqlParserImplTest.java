@@ -275,6 +275,21 @@ public class FlinkSqlParserImplTest extends SqlParserTest {
         final String sql3 = "alter table t1 drop constraint ct1";
         final String expected3 = "ALTER TABLE `T1` DROP CONSTRAINT `CT1`";
         sql(sql3).ok(expected3);
+
+        final String addWM1 = "alter table t1 add watermark for ts as ts - interval '1' second";
+        final String expectedAddWM1 =
+                "ALTER TABLE `T1` ADD WATERMARK FOR `TS` AS (`TS` - INTERVAL '1' SECOND)";
+        sql(addWM1).ok(expectedAddWM1);
+        final String addWM2 =
+                "alter table default_database.t1 add watermark for ts as ts - interval '1' second";
+        final String expectedAddWM2 =
+                "ALTER TABLE `DEFAULT_DATABASE`.`T1` ADD WATERMARK FOR `TS` AS (`TS` - INTERVAL '1' SECOND)";
+        sql(addWM2).ok(expectedAddWM2);
+        final String addWM3 =
+                "alter table default_catalog.default_database.t1 add watermark for ts as ts - interval '1' second";
+        final String expectedAddWM3 =
+                "ALTER TABLE `DEFAULT_CATALOG`.`DEFAULT_DATABASE`.`T1` ADD WATERMARK FOR `TS` AS (`TS` - INTERVAL '1' SECOND)";
+        sql(addWM3).ok(expectedAddWM3);
     }
 
     @Test

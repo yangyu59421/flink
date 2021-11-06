@@ -293,6 +293,63 @@ alter table orders2 set ('connector' = 'kafka', 'scan.startup.mode' = 'earliest-
 [INFO] Execute statement succeed.
 !info
 
+# test alter table add watermark
+CREATE TABLE `default_catalog`.`default_database`.`t_user` (
+  `user` BIGINT NOT NULL,
+  `product` VARCHAR(32),
+  `amount` INT,
+  `ts` TIMESTAMP(3),
+  `ptime` AS PROCTIME(),
+  CONSTRAINT `PK_3599338` PRIMARY KEY (`user`) NOT ENFORCED
+) WITH (
+  'connector' = 'datagen'
+);
+[INFO] Execute statement succeed.
+!info
+
+# test alter table add watermark for non_exist table
+alter table non_exist_table add watermark for `ts` as `ts` - interval '1' second;
+[ERROR] Could not execute SQL statement. Reason:
+org.apache.flink.table.api.ValidationException: Table `default_catalog`.`default_database`.`non_exist_table` doesn't exist or is a temporary table.
+!error
+
+# test alter table add watermark for non_exist table field
+alter table t_user add watermark for `non_exist_field` as `non_exist_field` - interval '1' second;
+[ERROR] Could not execute SQL statement. Reason:
+org.apache.flink.table.api.ValidationException: The rowtime attribute field 'non_exist_field' is not defined in the table schema, at line 1, column 38
+Available fields: ['user', 'product', 'amount', 'ts']
+!error
+
+# test alter table add watermark for normal case
+alter table t_user add watermark for `ts` as `ts` - interval '1' second;
+[INFO] Execute statement succeed.
+!info
+
+# check the add watermark result
+desc t_user;
++---------+-----------------------------+-------+-----------+---------------+----------------------------+
+|    name |                        type |  null |       key |        extras |                  watermark |
++---------+-----------------------------+-------+-----------+---------------+----------------------------+
+|    user |                      BIGINT | false | PRI(user) |               |                            |
+| product |                 VARCHAR(32) |  true |           |               |                            |
+|  amount |                         INT |  true |           |               |                            |
+|      ts |      TIMESTAMP(3) *ROWTIME* |  true |           |               | `ts` - INTERVAL '1' SECOND |
+|   ptime | TIMESTAMP_LTZ(3) *PROCTIME* | false |           | AS PROCTIME() |                            |
++---------+-----------------------------+-------+-----------+---------------+----------------------------+
+5 rows in set
+!ok
+
+# test alter table add watermark for duplicated watermark
+alter table t_user add watermark for `ts` as `ts` - interval '2' second;
+[ERROR] Could not execute SQL statement. Reason:
+org.apache.flink.table.api.ValidationException: There is a watermark 'WATERMARK FOR ts: TIMESTAMP(3) AS `ts` - INTERVAL '1' SECOND' already.
+!error
+
+# delete t_user
+drop table t_user;
+[INFO] Execute statement succeed.
+!info
+
 # verify table options using SHOW CREATE TABLE
 show create table orders2;
 CREATE TABLE `default_catalog`.`default_database`.`orders2` (

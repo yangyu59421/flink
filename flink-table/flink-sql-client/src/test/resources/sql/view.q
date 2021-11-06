@@ -133,6 +133,12 @@ show views;
 2 rows in set
 !ok
 
+# test alter table add watermark clause
+alter table v1 add watermark for ts as ts - interval '5' second;
+[ERROR] Could not execute SQL statement. Reason:
+org.apache.flink.table.api.ValidationException: Table `default_catalog`.`default_database`.`v1` doesn't exist or is a temporary table.
+!error
+
 # test describe view
 describe v1;
 +---------+-----------------------------+-------+-----+--------+-----------+

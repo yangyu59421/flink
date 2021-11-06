@@ -19,18 +19,45 @@
 package org.apache.flink.table.operations.ddl;
 
 import org.apache.flink.table.catalog.ObjectIdentifier;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.StringUtils;
 
 /** Operation of "ALTER TABLE ADD WATERMARK AS ..." clause. */
 public class AlterTableAddWatermarkOperation extends AlterTableOperation {
 
-    public AlterTableAddWatermarkOperation(ObjectIdentifier tableIdentifier) {
-        // todo
-        super(tableIdentifier);
+    private final String rowtimeAttribute;
+    private final String expressions;
+    private final DataType exprDataType;
+
+    public AlterTableAddWatermarkOperation(
+            ObjectIdentifier tableName,
+            String rowtimeAttribute,
+            String expressions,
+            DataType exprDataType) {
+        super(tableName);
+        Preconditions.checkState(!StringUtils.isNullOrWhitespaceOnly(rowtimeAttribute));
+        Preconditions.checkState(!StringUtils.isNullOrWhitespaceOnly(expressions));
+        this.exprDataType = Preconditions.checkNotNull(exprDataType);
+        this.rowtimeAttribute = rowtimeAttribute;
+        this.expressions = expressions;
+    }
+
+    public String getRowtimeAttribute() {
+        return rowtimeAttribute;
+    }
+
+    public String getExpressions() {
+        return expressions;
+    }
+
+    public DataType getExprDataType() {
+        return exprDataType;
     }
 
     @Override
     public String asSummaryString() {
-        // todo
-        return null;
+        return String.format(
+                "ALTER TABLE ADD WATERMARK FOR %s AS %s", rowtimeAttribute, expressions);
     }
 }

@@ -22,15 +22,18 @@ import org.apache.flink.sql.parser.ddl.SqlAddPartitions;
 import org.apache.flink.sql.parser.ddl.SqlAddReplaceColumns;
 import org.apache.flink.sql.parser.ddl.SqlAlterTable;
 import org.apache.flink.sql.parser.ddl.SqlAlterTableAddConstraint;
+import org.apache.flink.sql.parser.ddl.SqlAlterTableAddWatermark;
 import org.apache.flink.sql.parser.ddl.SqlAlterTableDropConstraint;
 import org.apache.flink.sql.parser.ddl.SqlAlterTableOptions;
 import org.apache.flink.sql.parser.ddl.SqlAlterTableRename;
 import org.apache.flink.sql.parser.ddl.SqlAlterTableReset;
 import org.apache.flink.sql.parser.ddl.SqlChangeColumn;
 import org.apache.flink.sql.parser.ddl.SqlDropPartitions;
+import org.apache.flink.sql.parser.ddl.SqlTableLike;
 import org.apache.flink.sql.parser.ddl.constraint.SqlTableConstraint;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
+import org.apache.flink.table.api.WatermarkSpec;
 import org.apache.flink.table.catalog.CatalogBaseTable;
 import org.apache.flink.table.catalog.CatalogManager;
 import org.apache.flink.table.catalog.CatalogPartition;
@@ -44,6 +47,7 @@ import org.apache.flink.table.operations.Operation;
 import org.apache.flink.table.operations.ddl.AddPartitionsOperation;
 import org.apache.flink.table.operations.ddl.AlterPartitionPropertiesOperation;
 import org.apache.flink.table.operations.ddl.AlterTableAddConstraintOperation;
+import org.apache.flink.table.operations.ddl.AlterTableAddWatermarkOperation;
 import org.apache.flink.table.operations.ddl.AlterTableDropConstraintOperation;
 import org.apache.flink.table.operations.ddl.AlterTableOperation;
 import org.apache.flink.table.operations.ddl.AlterTableOptionsOperation;
@@ -52,11 +56,13 @@ import org.apache.flink.table.operations.ddl.DropPartitionsOperation;
 import org.apache.flink.table.planner.calcite.FlinkPlannerImpl;
 import org.apache.flink.table.planner.utils.OperationConverterUtils;
 import org.apache.flink.table.utils.TableSchemaUtils;
+import org.apache.flink.util.Preconditions;
 
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -189,12 +195,81 @@ public class SqlAlterTableConverter {
                 specs.add(new CatalogPartitionSpec(dropPartitions.getPartitionKVs(i)));
             }
             return new DropPartitionsOperation(tableIdentifier, dropPartitions.ifExists(), specs);
+        } else if (sqlAlterTable instanceof SqlAlterTableAddWatermark) {
+            SqlAlterTableAddWatermark alterTableAddWatermark =
+                    (SqlAlterTableAddWatermark) sqlAlterTable;
+            return convertAlterTableAddWatermark(alterTableAddWatermark);
         } else {
             throw new ValidationException(
                     String.format(
                             "[%s] needs to implement",
                             sqlAlterTable.toSqlString(CalciteSqlDialect.DEFAULT)));
         }
+    }
+
+    private Operation convertAlterTableAddWatermark(
+            SqlAlterTableAddWatermark alterTableAddWatermark) {
+
+        Preconditions.checkNotNull(
+                alterTableAddWatermark.getWatermark(),
+                "Watermark in alter table clause must not be null.");
+
+        UnresolvedIdentifier unresolvedIdentifier =
+                UnresolvedIdentifier.of(alterTableAddWatermark.fullTableName());
+        ObjectIdentifier tableIdentifier = catalogManager.qualifyIdentifier(unresolvedIdentifier);
+
+        CatalogTable table = lookupTargetTable(alterTableAddWatermark);
+        final TableSchema sourceTableSchema =
+                TableSchema.fromResolvedSchema(
+                        table.getUnresolvedSchema().resolve(catalogManager.getSchemaResolver()));
+        List<WatermarkSpec> watermarkSpecs = sourceTableSchema.getWatermarkSpecs();
+        if (!watermarkSpecs.isEmpty()) {
+            throw new ValidationException(
+                    String.format("There is a watermark '%s' already.", watermarkSpecs.get(0)));
+        }
+        // reuse the a part of create ... like ... clause code.
+        final List<SqlTableLike.SqlTableLikeOption> likeOptions = Collections.emptyList();
+        Map<SqlTableLike.FeatureOption, SqlTableLike.MergingStrategy> mergingStrategies =
+                mergeTableLikeUtil.computeMergingStrategies(likeOptions);
+        TableSchema mergedSchema =
+                mergeTableLikeUtil.mergeTables(
+                        mergingStrategies,
+                        sourceTableSchema,
+                        Collections.emptyList(),
+                        Collections.singletonList(alterTableAddWatermark.getWatermark()),
+                        null);
+        WatermarkSpec toAddWatermark = mergedSchema.getWatermarkSpecs().get(0);
+
+        return new AlterTableAddWatermarkOperation(
+                tableIdentifier,
+                toAddWatermark.getRowtimeAttribute(),
+                toAddWatermark.getWatermarkExpr(),
+                toAddWatermark.getWatermarkExprOutputType());
+    }
+
+    private CatalogTable lookupTargetTable(SqlAlterTableAddWatermark alterTableAddWatermark) {
+        UnresolvedIdentifier unresolvedIdentifier =
+                UnresolvedIdentifier.of(alterTableAddWatermark.getTableName().names);
+        ObjectIdentifier identifier = catalogManager.qualifyIdentifier(unresolvedIdentifier);
+        CatalogManager.TableLookupResult lookupResult =
+                catalogManager
+                        .getTable(identifier)
+                        .orElseThrow(
+                                () ->
+                                        new ValidationException(
+                                                String.format(
+                                                        "Target table '%s' of the ALTER clause not found in the catalog, at %s",
+                                                        identifier,
+                                                        alterTableAddWatermark
+                                                                .getTableName()
+                                                                .getParserPosition())));
+        if (!(lookupResult.getTable() instanceof CatalogTable)) {
+            throw new ValidationException(
+                    String.format(
+                            "Target table '%s' of the ALTER clause can not be a VIEW, at %s",
+                            identifier, alterTableAddWatermark.getTableName().getParserPosition()));
+        }
+        return (CatalogTable) lookupResult.getTable();
     }
 
     private Operation convertAlterTableOptions(

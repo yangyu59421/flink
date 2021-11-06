@@ -21,7 +21,7 @@ package org.apache.flink.table.api
 import com.google.common.collect.Lists
 import org.apache.flink.types.Row
 import org.apache.flink.util.{CollectionUtil, TestLogger}
-import org.junit.rules.TemporaryFolder
+import org.junit.rules.{ExpectedException, TemporaryFolder}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Assert, Rule, Test}
@@ -36,6 +36,11 @@ import _root_.java.util
 class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
 
   private val _tempFolder = new TemporaryFolder()
+
+  var _expectedEx: ExpectedException = ExpectedException.none
+
+  @Rule
+  def expectedEx: ExpectedException = _expectedEx
 
   @Rule
   def tempFolder: TemporaryFolder = _tempFolder
@@ -69,6 +74,7 @@ class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
          | `user` BIGINT NOT NULl,
          | `product` VARCHAR(32),
          | `amount` INT,
+         | `ts` TIMESTAMP(3),
          | PRIMARY KEY(`user`) NOT ENFORCED
          |) """.stripMargin
     var createWithClause: String =
@@ -95,7 +101,8 @@ class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
     val expectedResultRows: util.List[Row] = Lists.newArrayList(
       Row.of("user", "BIGINT", new JBoolean(false), "PRI(user)", null, null),
       Row.of("product", "VARCHAR(32)", new JBoolean(true), null, null, null),
-      Row.of("amount", "INT", new JBoolean(true), null, null, null))
+      Row.of("amount", "INT", new JBoolean(true), null, null, null),
+      Row.of("ts", "TIMESTAMP(3)", new JBoolean(true), null, null, null))
     val resultsWithFrom: util.List[Row] = CollectionUtil.iteratorToList(
       tEnv
         .executeSql("show columns from orders")
@@ -132,7 +139,8 @@ class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
   private def showColumnsWithNotLikeClauseFromTable(): Unit = {
 
     val expectedResultRows: util.List[Row] = Lists.newArrayList(
-      Row.of("amount", "INT", new JBoolean(true), null, null, null))
+      Row.of("amount", "INT", new JBoolean(true), null, null, null),
+      Row.of("ts", "TIMESTAMP(3)", new JBoolean(true), null, null, null))
     val resultsWithFrom: util.List[Row] = CollectionUtil.iteratorToList(
       tEnv
         .executeSql("show columns from orders not like '%_r%'")
@@ -152,7 +160,8 @@ class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
     val expectedResultRows: util.List[Row] = Lists.newArrayList(
       Row.of("user", "BIGINT", new JBoolean(false), null, null, null),
       Row.of("product", "VARCHAR(32)", new JBoolean(true), null, null, null),
-      Row.of("amount", "INT", new JBoolean(true), null, null, null))
+      Row.of("amount", "INT", new JBoolean(true), null, null, null),
+      Row.of("ts", "TIMESTAMP(3)", new JBoolean(true), null, null, null))
     val resultsWithFrom: util.List[Row] = CollectionUtil.iteratorToList(
       tEnv
         .executeSql("show columns from orders_view")
@@ -189,7 +198,8 @@ class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
   private def showColumnsWithNotLikeClauseFromView(): Unit = {
 
     val expectedResultRows: util.List[Row] = Lists.newArrayList(
-      Row.of("amount", "INT", new JBoolean(true), null, null, null))
+      Row.of("amount", "INT", new JBoolean(true), null, null, null),
+      Row.of("ts", "TIMESTAMP(3)", new JBoolean(true), null, null, null))
     val resultsWithFrom: util.List[Row] = CollectionUtil.iteratorToList(
       tEnv
         .executeSql("show columns from orders_view not like '%_r%'")
@@ -204,6 +214,84 @@ class ExecuteSqlTest(isStreaming: Boolean) extends TestLogger {
     Assert.assertEquals(expectedResultRows, resultsWithIn)
   }
 
+  @Test
+  def testAlterTableAddWatermark(): Unit = {
+    initTableAndView()
+
+    //testAddWMForView()
+    //testAddWMForNonexistTable()
+    //testAddWMForNonexistField()
+    testAddWMForNormal()
+    testAddWMForDuplicated()
+  }
+
+  private def testAddWMForView(): Unit = {
+    expectedEx.expect(classOf[ValidationException])
+    expectedEx
+      .expectMessage("ALTER TABLE for a view is not allowed")
+    tEnv
+      .executeSql("alter table orders_view add watermark for ts as ts - interval '1' " +
+        "second")
+      .collect()
+  }
+
+  private def testAddWMForNonexistTable(): Unit = {
+    expectedEx.expect(classOf[ValidationException])
+    expectedEx
+      .expectMessage("Table `default_catalog`.`default_database`.`non_tb` doesn't " +
+        "exist or is a temporary table")
+    tEnv
+      .executeSql("alter table non_tb add watermark for ts as ts - interval '1' second")
+      .collect()
+  }
+
+  private def testAddWMForNonexistField(): Unit = {
+    expectedEx.expect(classOf[ValidationException])
+    expectedEx
+      .expectMessage("The rowtime attribute field 'non_f' is not defined in the table " +
+        "schema, at line 1, column 38\nAvailable fields: ['user', 'product', 'amount', 'ts']")
+    tEnv
+      .executeSql("alter table orders add watermark for non_f as non_f - interval '1' " +
+        "second")
+      .collect()
+  }
+
+  private def testAddWMForNormal(): Unit = {
+    tEnv
+      .executeSql("alter table orders add watermark for ts as ts - interval '1' second")
+      .collect()
+    val expectedResultRows: util.List[Row] = Lists.newArrayList(
+      Row.of("user", "BIGINT", new JBoolean(false), "PRI(user)", null, null),
+      Row.of("product", "VARCHAR(32)", new JBoolean(true), null, null, null),
+      Row.of("amount", "INT", new JBoolean(true), null, null, null),
+      Row.of("ts", getRowTimeByEnvMode(), new JBoolean(true), null, null,
+        "`ts` - INTERVAL '1' SECOND")
+    )
+    val resultsWithFrom: util.List[Row] = CollectionUtil.iteratorToList(
+      tEnv
+        .executeSql("show columns from orders")
+        .collect()
+    )
+    Assert.assertEquals(expectedResultRows, resultsWithFrom)
+  }
+
+  private def getRowTimeByEnvMode(): String = {
+    if (isStreaming) {
+      "TIMESTAMP(3) *ROWTIME*"
+    } else {
+      "TIMESTAMP(3)"
+    }
+  }
+
+  private def testAddWMForDuplicated(): Unit = {
+    expectedEx.expect(classOf[ValidationException])
+    expectedEx
+      .expectMessage("There is a watermark 'WATERMARK FOR ts: TIMESTAMP(3) AS " +
+        "`ts` - INTERVAL '1' SECOND' already.")
+    tEnv
+      .executeSql("alter table orders add watermark for ts as ts - interval '1' second")
+      .collect()
+  }
 }
 
 object ExecuteSqlTest {
