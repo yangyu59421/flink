@@ -35,8 +35,6 @@ import { COLOR_MAP } from 'config';
 import { JobDetailCorrectInterface, SafeAny, VerticesItemRangeInterface } from 'interfaces';
 import { JobService } from 'services';
 
-/// <reference path="../../../../../node_modules/@antv/g2/src/index.d.ts" />
-
 @Component({
   selector: 'flink-job-timeline',
   templateUrl: './job-timeline.component.html',
@@ -87,8 +85,12 @@ export class JobTimelineComponent implements AfterViewInit, OnDestroy {
           }
         });
       });
-      this.subTaskChartInstance.changeHeight(Math.max(data.subtasks.length * 50 + 100, 150));
-      this.subTaskChartInstance.source(this.listOfSubTaskTimeLine, {
+      this.subTaskChartInstance.changeSize(
+        this.subTaskChartInstance.width,
+        Math.max(data.subtasks.length * 50 + 100, 150)
+      );
+      this.subTaskChartInstance.data(this.listOfSubTaskTimeLine);
+      this.subTaskChartInstance.scale({
         range: {
           alias: 'Time',
           type: 'time',
@@ -110,16 +112,13 @@ export class JobTimelineComponent implements AfterViewInit, OnDestroy {
   setUpMainChart(): void {
     this.mainChartInstance = new G2.Chart({
       container: this.mainTimeLine.nativeElement,
-      forceFit: true,
-      animate: false,
+      autoFit: true,
       height: 500,
       padding: [50, 50, 50, 50]
     });
+    this.mainChartInstance.animate(false);
     this.mainChartInstance.axis('id', false);
-    this.mainChartInstance
-      .coord('rect')
-      .transpose()
-      .scale(1, -1);
+    this.mainChartInstance.coordinate('rect').transpose().scale(1, -1);
     this.mainChartInstance
       .interval()
       .position('id*range')
@@ -127,17 +126,18 @@ export class JobTimelineComponent implements AfterViewInit, OnDestroy {
       .color('status', (type: SafeAny) => COLOR_MAP[type])
       .label('name', {
         offset: -20,
-        formatter: (text: string) => {
-          if (text.length <= 120) {
-            return text;
-          } else {
-            return `${text.slice(0, 120)}...`;
-          }
-        },
-        textStyle: {
+        position: 'right',
+        style: {
           fill: '#ffffff',
           textAlign: 'right',
           fontWeight: 'bold'
+        },
+        content: (data: SafeAny) => {
+          if (data.name.length <= 120) {
+            return data.name;
+          } else {
+            return `${data.name.slice(0, 120)}...`;
+          }
         }
       });
     this.mainChartInstance.tooltip({
@@ -155,15 +155,12 @@ export class JobTimelineComponent implements AfterViewInit, OnDestroy {
   setUpSubTaskChart(): void {
     this.subTaskChartInstance = new G2.Chart({
       container: this.subTaskTimeLine.nativeElement,
-      forceFit: true,
+      autoFit: true,
       height: 10,
-      animate: false,
       padding: [50, 50, 50, 300]
     });
-    this.subTaskChartInstance
-      .coord('rect')
-      .transpose()
-      .scale(1, -1);
+    this.subTaskChartInstance.animate(false);
+    this.subTaskChartInstance.coordinate('rect').transpose().scale(1, -1);
     this.subTaskChartInstance
       .interval()
       .position('name*range')
@@ -194,8 +191,12 @@ export class JobTimelineComponent implements AfterViewInit, OnDestroy {
             };
           });
         this.listOfVertex = this.listOfVertex.sort((a, b) => a.range[0] - b.range[0]);
-        this.mainChartInstance.changeHeight(Math.max(this.listOfVertex.length * 50 + 100, 150));
-        this.mainChartInstance.source(this.listOfVertex, {
+        this.mainChartInstance.changeSize(
+          this.mainChartInstance.width,
+          Math.max(this.listOfVertex.length * 50 + 100, 150)
+        );
+        this.mainChartInstance.data(this.listOfVertex);
+        this.mainChartInstance.scale({
           range: {
             alias: 'Time',
             type: 'time',
