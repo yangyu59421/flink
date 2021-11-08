@@ -492,7 +492,7 @@ public class SortMergeResultPartition extends ResultPartition {
     }
 
     @Override
-    public long getSizeOfQueuedBuffers() {
+    public long getSizeOfQueuedBuffersUnsafe() {
         return 0;
     }
 

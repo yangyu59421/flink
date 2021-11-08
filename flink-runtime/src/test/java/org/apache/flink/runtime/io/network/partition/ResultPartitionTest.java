@@ -839,48 +839,63 @@ public class ResultPartitionTest {
         subpartition1.bufferSize(10);
 
         // when: Emit different records into different subpartitions.
+        // Emit the record less than buffer size.
         bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(3), 0);
-        // Since the buffer has not finished the size should not be changed.
-        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffers());
-
-        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(10), 0);
-        assertEquals(10, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(3, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
         bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(3), 1);
-        assertEquals(10, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(6, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
+
+        // Emit the record the equal to buffer size.
+        bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(10), 0);
+        assertEquals(16, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
         bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(10), 1);
-        assertEquals(20, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(26, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
+        // Broadcast event.
         bufferWritingResultPartition.broadcastEvent(EndOfPartitionEvent.INSTANCE, false);
-        // The previous buffers should be finished but size of event should be ignored.
-        assertEquals(26, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(34, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
+        // Emit one more record to the one subpartition.
         bufferWritingResultPartition.emitRecord(ByteBuffer.allocate(5), 0);
-        assertEquals(26, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(39, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
-        // when: Poll buffers.
+        // Broadcast record.
+        bufferWritingResultPartition.broadcastRecord(ByteBuffer.allocate(7));
+        assertEquals(53, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
+
+        // when: Poll finished buffers.
         assertEquals(10, subpartition0.pollBuffer().buffer().getSize());
-        assertEquals(16, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(43, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
         assertEquals(10, subpartition1.pollBuffer().buffer().getSize());
-        assertEquals(6, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(33, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
+        // Poll records which were unfinished because of broadcasting event.
         assertEquals(3, subpartition0.pollBuffer().buffer().getSize());
-        assertEquals(3, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(30, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
         assertEquals(3, subpartition1.pollBuffer().buffer().getSize());
-        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(27, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
         // Poll the event.
         assertEquals(4, subpartition0.pollBuffer().buffer().getSize());
-        // The size should not be changed since the size of event should be ignored.
-        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(23, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
+
+        assertEquals(4, subpartition1.pollBuffer().buffer().getSize());
+        assertEquals(19, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
 
         // Poll the unfinished buffer.
         assertEquals(5, subpartition0.pollBuffer().buffer().getSize());
-        // The size can be negative since the size is increasing only when we finish the buffer.
-        assertEquals(-5, bufferWritingResultPartition.getSizeOfQueuedBuffers());
+        assertEquals(14, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
+
+        // Poll broadcasted record.
+        assertEquals(7, subpartition0.pollBuffer().buffer().getSize());
+        assertEquals(7, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
+
+        assertEquals(7, subpartition1.pollBuffer().buffer().getSize());
+        assertEquals(0, bufferWritingResultPartition.getSizeOfQueuedBuffersUnsafe());
     }
 
     private static class TestResultPartitionConsumableNotifier

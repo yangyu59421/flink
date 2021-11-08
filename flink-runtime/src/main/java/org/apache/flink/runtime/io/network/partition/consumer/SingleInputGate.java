@@ -455,7 +455,8 @@ public class SingleInputGate extends IndexedInputGate {
                 }
 
                 return totalBuffers;
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                LOG.debug("Fail to get number of queued buffers :", ex);
             }
         }
 
@@ -473,7 +474,8 @@ public class SingleInputGate extends IndexedInputGate {
                 }
 
                 return totalSize;
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                LOG.debug("Fail to get size of queued buffers :", ex);
             }
         }
 

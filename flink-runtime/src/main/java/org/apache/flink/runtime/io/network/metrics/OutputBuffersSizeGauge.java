@@ -37,7 +37,7 @@ public class OutputBuffersSizeGauge implements Gauge<Long> {
         long totalBuffers = 0;
 
         for (ResultPartition producedPartition : resultPartitions) {
-            totalBuffers += producedPartition.getSizeOfQueuedBuffers();
+            totalBuffers += producedPartition.getSizeOfQueuedBuffersUnsafe();
         }
 
         return totalBuffers;

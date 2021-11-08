@@ -541,9 +541,7 @@ public class PipelinedSubpartition extends ResultSubpartition
     }
 
     private void updateStatistics(Buffer buffer) {
-        if (buffer.isBuffer()) {
-            totalNumberOfBytes += buffer.getSize();
-        }
+        totalNumberOfBytes += buffer.getSize();
     }
 
     @GuardedBy("buffers")

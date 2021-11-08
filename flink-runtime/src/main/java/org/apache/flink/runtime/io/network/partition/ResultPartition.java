@@ -178,7 +178,7 @@ public abstract class ResultPartition implements ResultPartitionWriter {
     public abstract int getNumberOfQueuedBuffers();
 
     /** Returns the total size in bytes of queued buffers of all subpartitions. */
-    public abstract long getSizeOfQueuedBuffers();
+    public abstract long getSizeOfQueuedBuffersUnsafe();
 
     /** Returns the number of queued buffers of the given target subpartition. */
     public abstract int getNumberOfQueuedBuffers(int targetSubpartition);

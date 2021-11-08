@@ -667,6 +667,44 @@ public class LocalInputChannelTest {
         assertEquals(3, localChannel.getBuffersInUseCount());
     }
 
+    @Test
+    public void testSizeOfQueuedBuffers() throws Exception {
+        // given: Local input channel without initialized subpartition view.
+        PipelinedResultPartition parent =
+                (PipelinedResultPartition)
+                        PartitionTestUtils.createPartition(
+                                ResultPartitionType.PIPELINED,
+                                NoOpFileChannelManager.INSTANCE,
+                                true,
+                                4096);
+        ResultSubpartition subpartition = parent.getAllPartitions()[0];
+
+        TestingResultPartitionManager partitionManager =
+                new TestingResultPartitionManager(subpartition.createReadView(() -> {}));
+        final SingleInputGate inputGate = createSingleInputGate(1);
+        final LocalInputChannel localChannel = createLocalInputChannel(inputGate, partitionManager);
+
+        inputGate.setInputChannels(localChannel);
+        localChannel.requestSubpartition(0);
+
+        // It doesn't matter what is the real size of buffers. Only current buffer size and number
+        // of buffers takes into account.
+        assertEquals(0, localChannel.unsynchronizedGetSizeOfQueuedBuffers());
+        localChannel.announceBufferSize(10);
+
+        subpartition.add(createFilledFinishedBufferConsumer(4096));
+        assertEquals(10, localChannel.unsynchronizedGetSizeOfQueuedBuffers());
+
+        subpartition.add(createFilledFinishedBufferConsumer(2));
+        assertEquals(20, localChannel.unsynchronizedGetSizeOfQueuedBuffers());
+
+        subpartition.add(createFilledFinishedBufferConsumer(513));
+        assertEquals(30, localChannel.unsynchronizedGetSizeOfQueuedBuffers());
+
+        localChannel.announceBufferSize(15);
+        assertEquals(45, localChannel.unsynchronizedGetSizeOfQueuedBuffers());
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     /** Returns the configured number of buffers for each channel in a random order. */
