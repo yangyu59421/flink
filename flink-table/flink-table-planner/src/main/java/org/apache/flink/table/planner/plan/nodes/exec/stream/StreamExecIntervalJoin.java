@@ -23,6 +23,7 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.dag.Transformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
+import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction;
 import org.apache.flink.streaming.api.operators.StreamFlatMap;
 import org.apache.flink.streaming.api.operators.StreamMap;
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator;
@@ -42,11 +43,14 @@ import org.apache.flink.table.planner.plan.utils.JoinUtil;
 import org.apache.flink.table.planner.plan.utils.KeySelectorUtil;
 import org.apache.flink.table.runtime.generated.GeneratedJoinCondition;
 import org.apache.flink.table.runtime.keyselector.RowDataKeySelector;
+import org.apache.flink.table.runtime.operators.join.FlinkJoinType;
 import org.apache.flink.table.runtime.operators.join.KeyedCoProcessOperatorWithWatermarkDelay;
 import org.apache.flink.table.runtime.operators.join.OuterJoinPaddingUtil;
 import org.apache.flink.table.runtime.operators.join.interval.IntervalJoinFunction;
+import org.apache.flink.table.runtime.operators.join.interval.ProcTImeSemiAntiIntervalJoin;
 import org.apache.flink.table.runtime.operators.join.interval.ProcTimeIntervalJoin;
 import org.apache.flink.table.runtime.operators.join.interval.RowTimeIntervalJoin;
+import org.apache.flink.table.runtime.operators.join.interval.RowTimeSemiAntiIntervalJoin;
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.util.Collector;
@@ -121,6 +125,8 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
             case LEFT:
             case RIGHT:
             case FULL:
+            case SEMI:
+            case ANTI:
                 long relativeWindowSize =
                         windowBounds.getLeftUpperBound() - windowBounds.getLeftLowerBound();
                 if (relativeWindowSize < 0) {
@@ -143,6 +149,9 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
                             new IntervalJoinFunction(
                                     joinCondition, returnTypeInfo, joinSpec.getFilterNulls());
 
+                    long idleStateRetentionTime =
+                            planner.getTableConfig().getIdleStateRetention().toMillis();
+
                     TwoInputTransformation<RowData, RowData, RowData> transform;
                     if (windowBounds.isEventTime()) {
                         transform =
@@ -152,7 +161,8 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
                                         returnTypeInfo,
                                         joinFunction,
                                         joinSpec,
-                                        windowBounds);
+                                        windowBounds,
+                                        idleStateRetentionTime);
                     } else {
                         transform =
                                 createProcTimeJoin(
@@ -161,7 +171,8 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
                                         returnTypeInfo,
                                         joinFunction,
                                         joinSpec,
-                                        windowBounds);
+                                        windowBounds,
+                                        idleStateRetentionTime);
                     }
 
                     if (inputsContainSingleton()) {
@@ -320,6 +331,12 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
                         Lists.newArrayList(filterAllLeftStream, padRightStream));
             case FULL:
                 return new UnionTransformation<>(Lists.newArrayList(padLeftStream, padRightStream));
+            case SEMI:
+                // If the window size is negative, all elements in left should not be output.
+                return filterAllLeftStream;
+            case ANTI:
+                // Opposite to SEMI
+                return leftInputTransform;
             default:
                 throw new TableException("should no reach here");
         }
@@ -331,25 +348,42 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
             InternalTypeInfo<RowData> returnTypeInfo,
             IntervalJoinFunction joinFunction,
             JoinSpec joinSpec,
-            IntervalJoinSpec.WindowBounds windowBounds) {
+            IntervalJoinSpec.WindowBounds windowBounds,
+            long idleStateRetentionTime) {
         InternalTypeInfo<RowData> leftTypeInfo =
                 (InternalTypeInfo<RowData>) leftInputTransform.getOutputType();
         InternalTypeInfo<RowData> rightTypeInfo =
                 (InternalTypeInfo<RowData>) rightInputTransform.getOutputType();
-        ProcTimeIntervalJoin procJoinFunc =
-                new ProcTimeIntervalJoin(
-                        joinSpec.getJoinType(),
-                        windowBounds.getLeftLowerBound(),
-                        windowBounds.getLeftUpperBound(),
-                        leftTypeInfo,
-                        rightTypeInfo,
-                        joinFunction);
+
+        KeyedCoProcessFunction rowTimeJoinFunc;
+
+        if (joinSpec.getJoinType() == FlinkJoinType.SEMI
+                || joinSpec.getJoinType() == FlinkJoinType.ANTI) {
+            rowTimeJoinFunc =
+                    new ProcTImeSemiAntiIntervalJoin(
+                            joinSpec.getJoinType() == FlinkJoinType.ANTI,
+                            windowBounds.getLeftLowerBound(),
+                            windowBounds.getLeftUpperBound(),
+                            leftTypeInfo,
+                            rightTypeInfo,
+                            joinFunction,
+                            idleStateRetentionTime);
+        } else {
+            rowTimeJoinFunc =
+                    new ProcTimeIntervalJoin(
+                            joinSpec.getJoinType(),
+                            windowBounds.getLeftLowerBound(),
+                            windowBounds.getLeftUpperBound(),
+                            leftTypeInfo,
+                            rightTypeInfo,
+                            joinFunction);
+        }
 
         return new TwoInputTransformation<>(
                 leftInputTransform,
                 rightInputTransform,
                 getDescription(),
-                new KeyedCoProcessOperator<>(procJoinFunc),
+                new KeyedCoProcessOperator<>(rowTimeJoinFunc),
                 returnTypeInfo,
                 leftInputTransform.getParallelism());
     }
@@ -360,30 +394,55 @@ public class StreamExecIntervalJoin extends ExecNodeBase<RowData>
             InternalTypeInfo<RowData> returnTypeInfo,
             IntervalJoinFunction joinFunction,
             JoinSpec joinSpec,
-            IntervalJoinSpec.WindowBounds windowBounds) {
+            IntervalJoinSpec.WindowBounds windowBounds,
+            long idleStateRetentionTime) {
 
         InternalTypeInfo<RowData> leftTypeInfo =
                 (InternalTypeInfo<RowData>) leftInputTransform.getOutputType();
         InternalTypeInfo<RowData> rightTypeInfo =
                 (InternalTypeInfo<RowData>) rightInputTransform.getOutputType();
-        RowTimeIntervalJoin rowJoinFunc =
-                new RowTimeIntervalJoin(
-                        joinSpec.getJoinType(),
-                        windowBounds.getLeftLowerBound(),
-                        windowBounds.getLeftUpperBound(),
-                        0L, // allowedLateness
-                        leftTypeInfo,
-                        rightTypeInfo,
-                        joinFunction,
-                        windowBounds.getLeftTimeIdx(),
-                        windowBounds.getRightTimeIdx());
 
+        long maxOutputDelay;
+        KeyedCoProcessFunction rowTimeJoinFunc;
+
+        if (joinSpec.getJoinType() == FlinkJoinType.SEMI
+                || joinSpec.getJoinType() == FlinkJoinType.ANTI) {
+            RowTimeSemiAntiIntervalJoin semiAntiIntervalJoin =
+                    new RowTimeSemiAntiIntervalJoin(
+                            joinSpec.getJoinType() == FlinkJoinType.ANTI,
+                            windowBounds.getLeftLowerBound(),
+                            windowBounds.getLeftUpperBound(),
+                            0L, // allowedLateness
+                            leftTypeInfo,
+                            rightTypeInfo,
+                            joinFunction,
+                            idleStateRetentionTime,
+                            windowBounds.getLeftTimeIdx(),
+                            windowBounds.getRightTimeIdx());
+
+            maxOutputDelay = semiAntiIntervalJoin.getMaxOutputDelay();
+            rowTimeJoinFunc = semiAntiIntervalJoin;
+        } else {
+            RowTimeIntervalJoin intervalJoin =
+                    new RowTimeIntervalJoin(
+                            joinSpec.getJoinType(),
+                            windowBounds.getLeftLowerBound(),
+                            windowBounds.getLeftUpperBound(),
+                            0L, // allowedLateness
+                            leftTypeInfo,
+                            rightTypeInfo,
+                            joinFunction,
+                            windowBounds.getLeftTimeIdx(),
+                            windowBounds.getRightTimeIdx());
+
+            maxOutputDelay = intervalJoin.getMaxOutputDelay();
+            rowTimeJoinFunc = intervalJoin;
+        }
         return new TwoInputTransformation<>(
                 leftInputTransform,
                 rightInputTransform,
                 getDescription(),
-                new KeyedCoProcessOperatorWithWatermarkDelay<>(
-                        rowJoinFunc, rowJoinFunc.getMaxOutputDelay()),
+                new KeyedCoProcessOperatorWithWatermarkDelay<>(rowTimeJoinFunc, maxOutputDelay),
                 returnTypeInfo,
                 leftInputTransform.getParallelism());
     }

@@ -27,11 +27,11 @@ import org.apache.flink.table.planner.plan.nodes.logical.FlinkLogicalJoin
 import org.apache.flink.table.planner.plan.schema.TimeIndicatorRelDataType
 
 import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.`type`.SqlTypeName
+import org.apache.calcite.sql.fun.SqlStdOperatorTable
 
 import java.util
 
@@ -450,15 +450,12 @@ object IntervalJoinUtil {
    *         else false.
    */
   def satisfyIntervalJoin(join: FlinkLogicalJoin): Boolean = {
-    // TODO support SEMI/ANTI joinSplitAggregateRuleTest
-    if (!join.getJoinType.projectsRight) {
-      return false
-    }
     val tableConfig = FlinkRelOptUtil.getTableConfigFromContext(join)
+    val rowType = JoinUtil.getAllRowType(join)
     val (windowBounds, _) = extractWindowBoundsFromPredicate(
       join.getCondition,
       join.getLeft.getRowType.getFieldCount,
-      join.getRowType,
+      rowType,
       join.getCluster.getRexBuilder,
       tableConfig)
     windowBounds.nonEmpty
@@ -466,10 +463,11 @@ object IntervalJoinUtil {
 
   def extractWindowBounds(join: FlinkLogicalJoin): (Option[WindowBounds], Option[RexNode]) = {
     val tableConfig = FlinkRelOptUtil.getTableConfigFromContext(join)
+    val rowType = JoinUtil.getAllRowType(join)
     extractWindowBoundsFromPredicate(
       join.getCondition,
       join.getLeft.getRowType.getFieldCount,
-      join.getRowType,
+      rowType,
       join.getCluster.getRexBuilder,
       tableConfig)
   }
