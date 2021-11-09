@@ -43,16 +43,6 @@ public class AvroParquetReaders {
      */
     public static <T extends SpecificRecordBase> AvroParquetRecordFormat<T> forSpecificRecord(
             final Class<T> typeClass) {
-        if (GenericRecord.class.isAssignableFrom(typeClass)) {
-            throw new IllegalArgumentException(
-                    "Please use AvroParquetReaders.forGenericRecord(Class<T>) for GenericRecord."
-                            + "Cannot read and create Avro GenericRecord without specifying the Avro Schema. "
-                            + "This is because Flink needs to be able serialize the results in its data flow, which is"
-                            + "very inefficient without the schema. And while the Schema is stored in the Avro file header,"
-                            + "Flink needs this schema during 'pre-flight' time when the data flow is set up and wired,"
-                            + "which is before there is access to the files");
-        }
-
         return new AvroParquetRecordFormat<>(new AvroTypeInfo<>(typeClass));
     }
 
@@ -70,7 +60,10 @@ public class AvroParquetReaders {
      * @see #forSpecificRecord(Class)
      */
     public static <T> AvroParquetRecordFormat<T> forReflectRecord(final Class<T> typeClass) {
-        if (GenericRecord.class.isAssignableFrom(typeClass)) {
+        if (SpecificRecordBase.class.isAssignableFrom(typeClass)) {
+            throw new IllegalArgumentException(
+                    "Please use AvroParquetReaders.forSpecificRecord(Class<T>) for SpecificRecord.");
+        } else if (GenericRecord.class.isAssignableFrom(typeClass)) {
             throw new IllegalArgumentException(
                     "Please use AvroParquetReaders.forGenericRecord(Class<T>) for GenericRecord."
                             + "Cannot read and create Avro GenericRecord without specifying the Avro Schema. "
@@ -78,9 +71,6 @@ public class AvroParquetReaders {
                             + "very inefficient without the schema. And while the Schema is stored in the Avro file header,"
                             + "Flink needs this schema during 'pre-flight' time when the data flow is set up and wired,"
                             + "which is before there is access to the files");
-        } else if (SpecificRecordBase.class.isAssignableFrom(typeClass)) {
-            throw new IllegalArgumentException(
-                    "Please use AvroParquetReaders.forSpecificRecord(Class<T>) for SpecificRecord.");
         }
 
         // this is a PoJo that Avo will reader via reflect de-serialization
