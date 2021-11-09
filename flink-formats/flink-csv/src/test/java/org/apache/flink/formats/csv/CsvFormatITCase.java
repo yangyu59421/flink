@@ -150,12 +150,12 @@ public class CsvFormatITCase extends TestLogger {
         final File testDir = TMP_FOLDER.newFolder();
         writeFile(testDir, "data.csv", CSV_LINES);
 
-        final CsvFormat<CitiesPojo> csvFormat = CsvFormat.toPojo(CitiesPojo.class);
-        final List<CitiesPojo> result = initializeSourceAndReadData(testDir, csvFormat);
+        final CsvFormat<CityPojo> csvFormat = CsvFormat.from(CityPojo.class);
+        final List<CityPojo> result = initializeSourceAndReadData(testDir, csvFormat);
 
-        final CitiesPojo[] expected =
-                new CitiesPojo[] {
-                    new CitiesPojo(
+        final CityPojo[] expected =
+                new CityPojo[] {
+                    new CityPojo(
                             "Berlin",
                             new BigDecimal("52.5167"),
                             new BigDecimal("13.3833"),
@@ -164,7 +164,7 @@ public class CsvFormatITCase extends TestLogger {
                             "Berlin",
                             "primary",
                             3644826L),
-                    new CitiesPojo(
+                    new CityPojo(
                             "San Francisco",
                             new BigDecimal("37.7562"),
                             new BigDecimal("-122.4430"),
@@ -173,7 +173,7 @@ public class CsvFormatITCase extends TestLogger {
                             "California",
                             "",
                             3592294L),
-                    new CitiesPojo(
+                    new CityPojo(
                             "Beijing",
                             new BigDecimal("39.9050"),
                             new BigDecimal("116.3914"),
@@ -197,7 +197,7 @@ public class CsvFormatITCase extends TestLogger {
         "capital",
         "population"
     })
-    public static class CitiesPojo {
+    public static class CityPojo {
         public String city;
         public BigDecimal lat;
         public BigDecimal lng;
@@ -207,9 +207,9 @@ public class CsvFormatITCase extends TestLogger {
         public String capital;
         public long population;
 
-        public CitiesPojo() {};
+        public CityPojo() {};
 
-        public CitiesPojo(
+        public CityPojo(
                 String city,
                 BigDecimal lat,
                 BigDecimal lng,
@@ -263,7 +263,7 @@ public class CsvFormatITCase extends TestLogger {
             if (o == null || getClass() != o.getClass()) {
                 return false;
             }
-            CitiesPojo that = (CitiesPojo) o;
+            CityPojo that = (CityPojo) o;
             return population == that.population
                     && Objects.equals(city, that.city)
                     && Objects.equals(lat, that.lat)

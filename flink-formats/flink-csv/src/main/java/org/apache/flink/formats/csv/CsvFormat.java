@@ -58,11 +58,11 @@ public class CsvFormat<T> extends SimpleStreamFormat<T> {
         this.converter = (Converter<Object, T, Void>) checkNotNull(converter);
     }
 
-    public static <T> CsvFormat<T> of(CsvSchema schema, TypeInformation<T> typeInformation) {
-        return of(new CsvMapper(), schema, typeInformation);
+    public static <T> CsvFormat<T> from(CsvSchema schema, TypeInformation<T> typeInformation) {
+        return from(new CsvMapper(), schema, typeInformation);
     }
 
-    public static <T> CsvFormat<T> of(
+    public static <T> CsvFormat<T> from(
             CsvMapper mapper, CsvSchema schema, TypeInformation<T> typeInformation) {
         return new CsvFormat<>(
                 mapper,
@@ -72,9 +72,9 @@ public class CsvFormat<T> extends SimpleStreamFormat<T> {
                 typeInformation);
     }
 
-    public static <T> CsvFormat<T> toPojo(Class<T> pojoType) {
+    public static <T> CsvFormat<T> from(Class<T> pojoType) {
         CsvMapper mapper = new CsvMapper();
-        return of(mapper, mapper.schemaFor(pojoType), TypeInformation.of(pojoType));
+        return from(mapper, mapper.schemaFor(pojoType), TypeInformation.of(pojoType));
     }
 
     @Override
