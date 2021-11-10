@@ -248,8 +248,8 @@ To define when to commit a partition, providing partition commit trigger:
   <thead>
     <tr>
         <th class="text-left" style="width: 20%">Key</th>
-        <th class="text-left" style="width: 15%">Default</th>
-        <th class="text-left" style="width: 10%">Type</th>
+        <th class="text-left" style="width: 18%">Default</th>
+        <th class="text-left" style="width: 7%">Type</th>
         <th class="text-left" style="width: 55%">Description</th>
     </tr>
   </thead>
@@ -329,13 +329,28 @@ Time extractors define extracting time from partition values.
         <td>The extractor class for implement PartitionTimeExtractor interface.</td>
     </tr>
     <tr>
+        <td><h5>partition.time-extractor.formatter-pattern</h5></td>
+        <td style="word-wrap: break-word;">yyyy-MM-dd&nbsp;HH:mm:ss</td>
+        <td>String</td>
+        <td>When 'partition.time-extractor.kind' is set to 'default', you can specify a formatter pattern to get a timestamp from partitions. <br>By default, the format is 'yyyy-MM-dd&nbsp;HH:mm:ss'.
+            <br>Examples as follows:
+            <br>'yyyy-MM-dd' -> '2018-07-14'
+            <br>'dd-MMM-yyyy' -> '14-Jul-2018'
+            <br>'E, MMM dd yyyy' -> 'Sat, Jul 14 2018'
+            <br>More details: https://www.w3.org/QA/Tips/iso-date</td>
+    </tr>
+    <tr>
         <td><h5>partition.time-extractor.timestamp-pattern</h5></td>
         <td style="word-wrap: break-word;">(none)</td>
         <td>String</td>
-        <td>The 'default' construction way allows users to use partition fields to get a legal timestamp pattern. Default support 'yyyy-mm-dd hh:mm:ss' from first field. If timestamp should be extracted from a single partition field 'dt', can configure: '$dt'. If timestamp should be extracted from multiple partition fields, say 'year', 'month', 'day' and 'hour', can configure: '$year-$month-$day $hour:00:00'. If timestamp should be extracted from two partition fields 'dt' and 'hour', can configure: '$dt $hour:00:00'.</td>
+        <td>The 'default' construction way allows users to use partition fields to get a legal timestamp pattern. Default support 'yyyy-MM-dd HH:mm:ss' from first field. If timestamp should be extracted from a single partition field 'dt', can configure: '$dt'. If timestamp should be extracted from multiple partition fields, say 'year', 'month', 'day' and 'hour', can configure: '$year-$month-$day $hour:00:00'. If timestamp should be extracted from two partition fields 'dt' and 'hour', can configure: '$dt $hour:00:00'.</td>
     </tr>
   </tbody>
 </table>
+
+
+
+
 
 The default extractor is based on a timestamp pattern composed of your partition fields. You can also specify an implementation for fully custom partition extraction based on the `PartitionTimeExtractor` interface.
 

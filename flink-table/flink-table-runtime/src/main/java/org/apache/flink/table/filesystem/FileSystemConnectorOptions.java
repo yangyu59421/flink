@@ -156,6 +156,27 @@ public class FileSystemConnectorOptions {
                     .withDescription(
                             "The extractor class for implement PartitionTimeExtractor interface.");
 
+    public static final ConfigOption<String> PARTITION_TIME_EXTRACTOR_FORMATTER_PATTEN =
+            key("partition.time-extractor.formatter-pattern")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription(
+                            Description.builder()
+                                    .text(
+                                            "When 'partition.time-extractor.kind' is set to 'default', "
+                                                    + "you can specify a formatter pattern to get a timestamp from "
+                                                    + "partitions.")
+                                    .list(
+                                            text(
+                                                    "By default, the format is 'yyyy-mm-dd hh:mm:ss', You can "
+                                                            + "customize value."),
+                                            text("Examples as follows:"),
+                                            text("yyyy-MM-dd -> 2018-07-14"),
+                                            text("dd-MMM-yyyy -> 14-Jul-2018"),
+                                            text("E, MMM dd yyyy -> Sat, Jul 14 2018"),
+                                            text("detail:https://www.w3.org/QA/Tips/iso-date"))
+                                    .build());
+
     public static final ConfigOption<String> PARTITION_TIME_EXTRACTOR_TIMESTAMP_PATTERN =
             key("partition.time-extractor.timestamp-pattern")
                     .stringType()
@@ -164,16 +185,24 @@ public class FileSystemConnectorOptions {
                             Description.builder()
                                     .text(
                                             "When 'partition.time-extractor.kind' is set to 'default', "
-                                                    + "you can specify a pattern to get a timestamp from partitions.")
+                                                    + "you can specify a pattern to get a timestamp from partitions. "
+                                                    + "the formatter pattern is defined by 'partition.time-extractor"
+                                                    + ".formatter-pattern'.")
                                     .list(
                                             text(
-                                                    "By default, a format of 'yyyy-mm-dd hh:mm:ss' is read from the first field."),
+                                                    "By default, a format of 'yyyy-mm-dd hh:mm:ss' is read from the "
+                                                            + "first field."),
                                             text(
                                                     "If the timestamp in the partition is a single field called 'dt', you can use '$dt'."),
                                             text(
                                                     "If it is spread across multiple fields for year, month, day, and hour, you can use '$year-$month-$day $hour:00:00'."),
                                             text(
-                                                    "If the timestamp is in fields dt and hour, you can use '$dt $hour:00:00'."))
+                                                    "If the timestamp is in fields dt and hour, you can use '$dt "
+                                                            + "$hour:00:00'."),
+                                            text(
+                                                    "By basicDate, a format of 'yyyyMMdd' is read from the first field."),
+                                            text(
+                                                    "If the timestamp in the partition is a single field called 'dt', you can use '$dt'."))
                                     .build());
 
     public static final ConfigOption<Duration> LOOKUP_JOIN_CACHE_TTL =
