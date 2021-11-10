@@ -137,6 +137,12 @@ public class JdbcConnectorOptions {
                     .defaultValue(3)
                     .withDescription("The max retry times if lookup database failed.");
 
+    public static final ConfigOption<Boolean> LOOKUP_EXCLUDE_EMPTY_QUERY_RESULT =
+            ConfigOptions.key("lookup.exclude-empty-query-result")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription("Flag to exclude empty query result");
+
     // write config options
     public static final ConfigOption<Integer> SINK_BUFFER_FLUSH_MAX_ROWS =
             ConfigOptions.key("sink.buffer-flush.max-rows")

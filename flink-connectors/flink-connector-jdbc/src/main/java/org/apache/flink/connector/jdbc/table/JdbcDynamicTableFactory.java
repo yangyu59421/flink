@@ -46,6 +46,7 @@ import java.util.Set;
 import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.DRIVER;
 import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.LOOKUP_CACHE_MAX_ROWS;
 import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.LOOKUP_CACHE_TTL;
+import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.LOOKUP_EXCLUDE_EMPTY_QUERY_RESULT;
 import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.LOOKUP_MAX_RETRIES;
 import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.MAX_RETRY_TIMEOUT;
 import static org.apache.flink.connector.jdbc.table.JdbcConnectorOptions.PASSWORD;
@@ -150,7 +151,8 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
         return new JdbcLookupOptions(
                 readableConfig.get(LOOKUP_CACHE_MAX_ROWS),
                 readableConfig.get(LOOKUP_CACHE_TTL).toMillis(),
-                readableConfig.get(LOOKUP_MAX_RETRIES));
+                readableConfig.get(LOOKUP_MAX_RETRIES),
+                readableConfig.get(LOOKUP_EXCLUDE_EMPTY_QUERY_RESULT));
     }
 
     private JdbcExecutionOptions getJdbcExecutionOptions(ReadableConfig config) {
@@ -205,6 +207,7 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
         optionalOptions.add(LOOKUP_CACHE_MAX_ROWS);
         optionalOptions.add(LOOKUP_CACHE_TTL);
         optionalOptions.add(LOOKUP_MAX_RETRIES);
+        optionalOptions.add(LOOKUP_EXCLUDE_EMPTY_QUERY_RESULT);
         optionalOptions.add(SINK_BUFFER_FLUSH_MAX_ROWS);
         optionalOptions.add(SINK_BUFFER_FLUSH_INTERVAL);
         optionalOptions.add(SINK_MAX_RETRIES);

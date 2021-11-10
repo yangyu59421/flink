@@ -215,6 +215,13 @@ Connector Options
       <td>The max retry times if lookup database failed.</td>
     </tr>
     <tr>
+      <td><h5>lookup.exclude-empty-query-result</h5></td>
+      <td>optional</td>
+      <td style="word-wrap: break-word;">3</td>
+      <td>Boolean</td>
+      <td>Flag to exclude empty query result. false by default</td>
+    </tr>
+    <tr>
       <td><h5>sink.buffer-flush.max-rows</h5></td>
       <td>optional</td>
       <td style="word-wrap: break-word;">100</td>
