@@ -114,8 +114,7 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
             Transformation<RowData> inputTransform,
             int rowtimeFieldIndex,
             boolean upsertMaterialize) {
-        final DynamicTableSink tableSink = tableSinkSpec.getTableSink(planner.getFlinkContext());
-        final ChangelogMode changelogMode = tableSink.getChangelogMode(inputChangelogMode);
+        final DynamicTableSink tableSink = tableSinkSpec.getTableSink(planner);
         final ResolvedSchema schema = tableSinkSpec.getCatalogTable().getResolvedSchema();
 
         final SinkRuntimeProvider runtimeProvider =
@@ -132,7 +131,8 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
 
         sinkTransform =
                 applyKeyBy(
-                        changelogMode,
+                        planner.getTableConfig(),
+                        inputChangelogMode,
                         sinkTransform,
                         primaryKeys,
                         sinkParallelism,
@@ -231,14 +231,31 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
      * messages.
      */
     private Transformation<RowData> applyKeyBy(
-            ChangelogMode changelogMode,
+            TableConfig config,
+            ChangelogMode inputChangelogMode,
             Transformation<RowData> inputTransform,
             int[] primaryKeys,
             int sinkParallelism,
             boolean upsertMaterialize) {
         final int inputParallelism = inputTransform.getParallelism();
-        if ((inputParallelism == sinkParallelism || changelogMode.containsOnly(RowKind.INSERT))
-                && !upsertMaterialize) {
+        final ExecutionConfigOptions.SinkShuffleByPk sinkShuffleByPk =
+                config.getConfiguration().get(ExecutionConfigOptions.TABLE_EXEC_SINK_SHUFFLE_BY_PK);
+        boolean keyBy = false;
+        switch (sinkShuffleByPk) {
+            case NONE:
+                break;
+            case AUTO:
+                keyBy =
+                        inputChangelogMode.containsOnly(RowKind.INSERT)
+                                && inputParallelism != sinkParallelism
+                                && !upsertMaterialize;
+                break;
+            case FORCE:
+                // single parallelism has no problem and upsertMaterialize will add a 'keyby'
+                keyBy = !(inputParallelism == 1 || sinkParallelism == 1) && !upsertMaterialize;
+                break;
+        }
+        if (!keyBy) {
             return inputTransform;
         }
         if (primaryKeys.length == 0) {

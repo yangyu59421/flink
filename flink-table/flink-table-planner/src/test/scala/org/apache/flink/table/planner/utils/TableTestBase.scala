@@ -1450,6 +1450,8 @@ class TestingTableEnvironment private(
   }
 
   override def createStatementSet(): StatementSet = new TestingStatementSet(this)
+
+
 }
 
 class TestingStatementSet(tEnv: TestingTableEnvironment) extends StatementSet {
