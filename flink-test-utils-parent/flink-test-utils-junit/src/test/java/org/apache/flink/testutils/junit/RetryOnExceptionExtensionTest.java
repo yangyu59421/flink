@@ -18,6 +18,9 @@
 
 package org.apache.flink.testutils.junit;
 
+import org.apache.flink.testutils.junit.extensions.retry.RetryExtension;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnException;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;

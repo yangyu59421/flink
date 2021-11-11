@@ -22,6 +22,8 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,6 +66,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>Note that since the shared objects are accessed through multiple threads, they need to be
  * thread-safe or accessed in a thread-safe manner.
  */
+@NotThreadSafe
 public class SharedObjectsExtension implements BeforeEachCallback, AfterEachCallback {
     /** Instance-cache used to make a SharedObjects accessible for multiple threads. */
     private static final Map<Integer, SharedObjectsExtension> INSTANCES = new ConcurrentHashMap<>();

@@ -18,8 +18,8 @@
 
 package org.apache.flink.api.java.sampling;
 
-import org.apache.flink.testutils.junit.RetryOnFailure;
 import org.apache.flink.testutils.junit.RetryRule;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnFailure;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest;

@@ -47,8 +47,8 @@ import org.apache.flink.streaming.runtime.operators.WriteAheadSinkTestBase;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.api.internal.TableEnvironmentInternal;
 import org.apache.flink.testutils.junit.FailsOnJava11;
-import org.apache.flink.testutils.junit.RetryOnException;
 import org.apache.flink.testutils.junit.RetryRule;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnException;
 import org.apache.flink.types.Row;
 
 import com.datastax.driver.core.Cluster;

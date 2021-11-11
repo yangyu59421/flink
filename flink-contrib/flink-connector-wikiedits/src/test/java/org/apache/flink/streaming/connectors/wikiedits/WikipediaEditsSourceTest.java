@@ -21,8 +21,8 @@ package org.apache.flink.streaming.connectors.wikiedits;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
-import org.apache.flink.testutils.junit.RetryOnFailure;
 import org.apache.flink.testutils.junit.RetryRule;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnFailure;
 
 import org.junit.Rule;
 import org.junit.Test;

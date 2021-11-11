@@ -18,6 +18,8 @@
 
 package org.apache.flink.testutils.junit;
 
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnException;
+
 import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;

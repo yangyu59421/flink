@@ -18,6 +18,9 @@
 
 package org.apache.flink.testutils.junit;
 
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnException;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnFailure;
+
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;

@@ -17,6 +17,7 @@
 
 package org.apache.flink.testutils.junit;
 
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnFailure;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Assert;

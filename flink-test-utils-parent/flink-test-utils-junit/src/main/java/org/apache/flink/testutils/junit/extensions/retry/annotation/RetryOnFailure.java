@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.flink.testutils.junit;
+package org.apache.flink.testutils.junit.extensions.retry.annotation;
+
+import org.apache.flink.testutils.junit.RetryRule;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

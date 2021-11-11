@@ -16,32 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.flink.core.testutils;
+package org.apache.flink.testutils.junit.extensions.retry.strategy;
 
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+/** Retry strategy base class. */
+public abstract class AbstractRetryStrategy implements RetryStrategy {
+    protected final int totalTimes;
+    protected boolean hasNextAttempt;
 
-/** An extension wrap logic for {@link BeforeAllCallback} and {@link AfterAllCallback}. */
-public class AllCallbackWrapper<C extends CustomExtension>
-        implements BeforeAllCallback, AfterAllCallback {
-    private final C customExtension;
-
-    public AllCallbackWrapper(C customExtension) {
-        this.customExtension = customExtension;
-    }
-
-    public C getCustomExtension() {
-        return customExtension;
+    public AbstractRetryStrategy(int totalTimes, boolean hasNextAttempt) {
+        this.totalTimes = totalTimes;
+        this.hasNextAttempt = hasNextAttempt;
     }
 
     @Override
-    public void afterAll(ExtensionContext context) throws Exception {
-        customExtension.after(context);
+    public boolean hasNextAttempt() {
+        return hasNextAttempt;
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
-        customExtension.before(context);
+    public void stopFollowingAttempts() {
+        this.hasNextAttempt = false;
     }
 }

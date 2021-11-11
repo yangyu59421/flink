@@ -24,8 +24,8 @@ import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.fs.hdfs.HadoopFileSystem;
-import org.apache.flink.testutils.junit.RetryOnFailure;
 import org.apache.flink.testutils.junit.RetryRule;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnFailure;
 import org.apache.flink.testutils.s3.S3TestCredentials;
 import org.apache.flink.util.TestLogger;
 

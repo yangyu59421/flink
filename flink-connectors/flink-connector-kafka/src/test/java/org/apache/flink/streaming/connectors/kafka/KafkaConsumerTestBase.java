@@ -76,8 +76,8 @@ import org.apache.flink.streaming.connectors.kafka.testutils.ValidatingExactlyOn
 import org.apache.flink.streaming.util.serialization.KeyedSerializationSchema;
 import org.apache.flink.streaming.util.serialization.TypeInformationKeyValueSerializationSchema;
 import org.apache.flink.test.util.SuccessException;
-import org.apache.flink.testutils.junit.RetryOnException;
 import org.apache.flink.testutils.junit.RetryRule;
+import org.apache.flink.testutils.junit.extensions.retry.annotation.RetryOnException;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.ExceptionUtils;
 

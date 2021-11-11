@@ -21,7 +21,8 @@ package org.apache.flink.core.testutils;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * An extension logic should be used with {@link EachCallbackWrapper} or {@link AllCallbackWrapper}.
+ * An extension that is invoked before/after all/each tests, depending on whether it is wrapped in a
+ * {@link EachCallbackWrapper} or {@link AllCallbackWrapper}.
  *
  * <p>{@code before} method will be called in {@code beforeEach} or {@code beforeAll}. {@code after}
  * will be called in {@code afterEach} or {@code afterAll}.
@@ -39,8 +40,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  * }
  * }</pre>
  *
- * <p>Note that do not use the same {@code CustomExtension} instance to the AllCallbackWrapper and
- * EachCallbackWrapper for the same test class, which may result in odd behavior.
+ * <p>A {@code CustomExtension} instance must not be wrapped in both AllCallbackWrapper and
+ * EachCallbackWrapper for the same test class.
  */
 public interface CustomExtension {
     default void before(ExtensionContext context) throws Exception {}
