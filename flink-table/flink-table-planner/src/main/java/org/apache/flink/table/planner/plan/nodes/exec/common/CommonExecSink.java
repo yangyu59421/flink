@@ -125,6 +125,7 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
         final int[] primaryKeys = getPrimaryKeyIndices(physicalRowType, schema);
 
         final int sinkParallelism = deriveSinkParallelism(inputTransform, runtimeProvider);
+        final int inputParallelism = inputTransform.getParallelism();
 
         Transformation<RowData> sinkTransform =
                 applyNotNullEnforcer(inputTransform, planner.getTableConfig(), physicalRowType);
@@ -136,9 +137,11 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
                         sinkTransform,
                         primaryKeys,
                         sinkParallelism,
+                        inputParallelism,
                         upsertMaterialize);
 
-        if (upsertMaterialize) {
+        // upsertMaterialize can be optimized if same parallelism
+        if (inputParallelism != sinkParallelism && upsertMaterialize) {
             sinkTransform =
                     applyUpsertMaterialize(
                             sinkTransform,
@@ -236,29 +239,28 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
             Transformation<RowData> inputTransform,
             int[] primaryKeys,
             int sinkParallelism,
+            int inputParallelism,
             boolean upsertMaterialize) {
-        final int inputParallelism = inputTransform.getParallelism();
+        boolean sameParallelism = sinkParallelism == inputParallelism;
+        boolean inputInsertOnly = inputChangelogMode.containsOnly(RowKind.INSERT);
         final ExecutionConfigOptions.SinkShuffleByPk sinkShuffleByPk =
                 config.getConfiguration().get(ExecutionConfigOptions.TABLE_EXEC_SINK_SHUFFLE_BY_PK);
-        boolean keyBy = false;
+        boolean sinkKeyBy = false;
         switch (sinkShuffleByPk) {
             case NONE:
                 break;
             case AUTO:
-                keyBy =
-                        inputChangelogMode.containsOnly(RowKind.INSERT)
-                                && inputParallelism != sinkParallelism
-                                && !upsertMaterialize;
+                sinkKeyBy = inputInsertOnly && !sameParallelism;
                 break;
             case FORCE:
-                // single parallelism has no problem and upsertMaterialize will add a 'keyby'
-                keyBy = !(inputParallelism == 1 || sinkParallelism == 1) && !upsertMaterialize;
+                // single parallelism has no problem
+                sinkKeyBy = sinkParallelism != 1 && inputParallelism != 1;
                 break;
         }
-        if (!keyBy) {
+        if (!sinkKeyBy && !upsertMaterialize) {
             return inputTransform;
         }
-        if (primaryKeys.length == 0) {
+        if (!inputInsertOnly && !sameParallelism && primaryKeys.length == 0) {
             throw new TableException(
                     String.format(
                             "The sink for table '%s' has a configured parallelism of %s, while the input parallelism is %s. "
