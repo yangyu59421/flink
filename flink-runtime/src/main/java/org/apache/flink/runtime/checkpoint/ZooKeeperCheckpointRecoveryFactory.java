@@ -65,7 +65,8 @@ public class ZooKeeperCheckpointRecoveryFactory implements CheckpointRecoveryFac
 
         for (CompletedCheckpoint completedCheckpoint :
                 completedCheckpointStore.getAllCheckpoints()) {
-            completedCheckpointStore.registerSharedState(completedCheckpoint.getOperatorStates());
+            completedCheckpointStore.registerSharedState(
+                    completedCheckpoint.getOperatorStates(), completedCheckpoint.getCheckpointID());
         }
         return completedCheckpointStore;
     }

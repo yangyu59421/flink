@@ -44,10 +44,12 @@ public interface SharedStateRegistry extends AutoCloseable {
      * to replace the one from the registration request.
      *
      * @param state the shared state for which we register a reference.
+     * @param checkpointID which uses the state
      * @return the result of this registration request, consisting of the state handle that is
      *     registered under the key by the end of the operation and its current reference count.
      */
-    Result registerReference(SharedStateRegistryKey registrationKey, StreamStateHandle state);
+    Result registerReference(
+            SharedStateRegistryKey registrationKey, StreamStateHandle state, long checkpointID);
 
     /**
      * Releases one reference to the given shared state in the registry. This decreases the
@@ -64,8 +66,9 @@ public interface SharedStateRegistry extends AutoCloseable {
      * Register given shared states in the registry.
      *
      * @param stateHandles The shared states to register.
+     * @param checkpointID which uses the states.
      */
-    void registerAll(Iterable<? extends CompositeStateHandle> stateHandles);
+    void registerAll(Iterable<? extends CompositeStateHandle> stateHandles, long checkpointID);
 
     /** The result of an attempt to (un)/reference state */
     class Result {
@@ -150,7 +153,9 @@ public interface SharedStateRegistry extends AutoCloseable {
 
                 @Override
                 public Result registerReference(
-                        SharedStateRegistryKey registrationKey, StreamStateHandle state) {
+                        SharedStateRegistryKey registrationKey,
+                        StreamStateHandle state,
+                        long checkpointID) {
                     return new Result(state, 0);
                 }
 
@@ -160,6 +165,7 @@ public interface SharedStateRegistry extends AutoCloseable {
                 }
 
                 @Override
-                public void registerAll(Iterable<? extends CompositeStateHandle> stateHandles) {}
+                public void registerAll(
+                        Iterable<? extends CompositeStateHandle> stateHandles, long checkpointID) {}
             };
 }

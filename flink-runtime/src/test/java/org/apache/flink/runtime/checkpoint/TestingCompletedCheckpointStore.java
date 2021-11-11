@@ -73,7 +73,8 @@ public final class TestingCompletedCheckpointStore implements CompletedCheckpoin
     }
 
     @Override
-    public void registerSharedState(Map<OperatorID, OperatorState> operatorStates) {
+    public void registerSharedState(
+            Map<OperatorID, OperatorState> operatorStates, long checkpointID) {
         throw new UnsupportedOperationException("Not implemented.");
     }
 }

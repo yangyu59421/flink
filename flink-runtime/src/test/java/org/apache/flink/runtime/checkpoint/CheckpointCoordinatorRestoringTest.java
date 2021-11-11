@@ -84,6 +84,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -257,7 +258,9 @@ public class CheckpointCoordinatorRestoringTest extends TestLogger {
             for (OperatorState taskState : completedCheckpoint.getOperatorStates().values()) {
                 for (OperatorSubtaskState subtaskState : taskState.getStates()) {
                     verify(subtaskState, times(2))
-                            .registerSharedStates(any(SharedStateRegistry.class));
+                            .registerSharedStates(
+                                    any(SharedStateRegistry.class),
+                                    eq(completedCheckpoint.getCheckpointID()));
                 }
             }
         }

@@ -66,7 +66,8 @@ public enum DeactivatedCheckpointCompletedCheckpointStore implements CompletedCh
     }
 
     @Override
-    public void registerSharedState(Map<OperatorID, OperatorState> operatorStates) {
+    public void registerSharedState(
+            Map<OperatorID, OperatorState> operatorStates, long checkpointID) {
         throw unsupportedOperationException();
     }
 

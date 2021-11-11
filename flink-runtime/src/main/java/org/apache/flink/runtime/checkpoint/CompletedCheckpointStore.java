@@ -106,5 +106,5 @@ public interface CompletedCheckpointStore {
      */
     boolean requiresExternalizedCheckpoints();
 
-    void registerSharedState(Map<OperatorID, OperatorState> operatorStates);
+    void registerSharedState(Map<OperatorID, OperatorState> operatorStates, long checkpointID);
 }

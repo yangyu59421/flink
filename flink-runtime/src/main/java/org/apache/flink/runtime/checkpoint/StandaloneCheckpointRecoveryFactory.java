@@ -39,7 +39,8 @@ public class StandaloneCheckpointRecoveryFactory implements CheckpointRecoveryFa
 
         for (CompletedCheckpoint completedCheckpoint :
                 completedCheckpointStore.getAllCheckpoints()) {
-            completedCheckpointStore.registerSharedState(completedCheckpoint.getOperatorStates());
+            completedCheckpointStore.registerSharedState(
+                    completedCheckpoint.getOperatorStates(), completedCheckpoint.getCheckpointID());
         }
         return completedCheckpointStore;
     }

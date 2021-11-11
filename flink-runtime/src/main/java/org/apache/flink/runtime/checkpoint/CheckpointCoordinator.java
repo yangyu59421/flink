@@ -1208,7 +1208,8 @@ public class CheckpointCoordinator {
 
         // As a first step to complete the checkpoint, we register its state with the registry
         Map<OperatorID, OperatorState> operatorStates = pendingCheckpoint.getOperatorStates();
-        completedCheckpointStore.registerSharedState(operatorStates);
+        completedCheckpointStore.registerSharedState(
+                operatorStates, pendingCheckpoint.getCheckpointID());
 
         try {
             try {

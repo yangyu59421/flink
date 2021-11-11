@@ -1135,14 +1135,15 @@ public class CheckpointCoordinatorTest extends TestLogger {
         assertFalse(checkpoint.isDisposed());
         assertFalse(checkpoint.areTasksFullyAcknowledged());
         verify(taskOperatorSubtaskStates2, never())
-                .registerSharedStates(any(SharedStateRegistry.class));
+                .registerSharedStates(any(SharedStateRegistry.class), eq(checkpointId));
 
         // acknowledge the same task again (should not matter)
         checkpointCoordinator.receiveAcknowledgeMessage(
                 acknowledgeCheckpoint1, TASK_MANAGER_LOCATION_INFO);
         assertFalse(checkpoint.isDisposed());
         assertFalse(checkpoint.areTasksFullyAcknowledged());
-        verify(subtaskState2, never()).registerSharedStates(any(SharedStateRegistry.class));
+        verify(subtaskState2, never())
+                .registerSharedStates(any(SharedStateRegistry.class), eq(checkpointId));
 
         // acknowledge the other task.
         checkpointCoordinator.receiveAcknowledgeMessage(
@@ -1167,8 +1168,10 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
         // validate that the subtasks states have registered their shared states.
         {
-            verify(subtaskState1, times(1)).registerSharedStates(any(SharedStateRegistry.class));
-            verify(subtaskState2, times(1)).registerSharedStates(any(SharedStateRegistry.class));
+            verify(subtaskState1, times(1))
+                    .registerSharedStates(any(SharedStateRegistry.class), eq(checkpointId));
+            verify(subtaskState2, times(1))
+                    .registerSharedStates(any(SharedStateRegistry.class), eq(checkpointId));
         }
 
         // validate that the relevant tasks got a confirmation message
@@ -2028,8 +2031,10 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
         // validate that the shared states are registered
         {
-            verify(subtaskState1, times(1)).registerSharedStates(any(SharedStateRegistry.class));
-            verify(subtaskState2, times(1)).registerSharedStates(any(SharedStateRegistry.class));
+            verify(subtaskState1, times(1))
+                    .registerSharedStates(any(SharedStateRegistry.class), eq(checkpointId));
+            verify(subtaskState2, times(1))
+                    .registerSharedStates(any(SharedStateRegistry.class), eq(checkpointId));
         }
 
         CompletedCheckpoint success = checkpointCoordinator.getSuccessfulCheckpoints().get(0);
@@ -2851,7 +2856,9 @@ public class CheckpointCoordinatorTest extends TestLogger {
                 for (OperatorSubtaskState subtaskState : taskState.getStates()) {
                     for (KeyedStateHandle keyedStateHandle : subtaskState.getManagedKeyedState()) {
                         // test we are once registered with the current registry
-                        verify(keyedStateHandle, times(1)).registerSharedStates(firstInstance);
+                        verify(keyedStateHandle, times(1))
+                                .registerSharedStates(
+                                        firstInstance, completedCheckpoint.getCheckpointID());
                         IncrementalRemoteKeyedStateHandle incrementalKeyedStateHandle =
                                 (IncrementalRemoteKeyedStateHandle) keyedStateHandle;
 
@@ -2929,7 +2936,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
                         // check that all are registered with the new registry
                         verify(keyedStateHandle, verificationMode)
-                                .registerSharedStates(secondInstance);
+                                .registerSharedStates(
+                                        secondInstance, completedCheckpoint.getCheckpointID());
                     }
                 }
             }
@@ -3060,7 +3068,9 @@ public class CheckpointCoordinatorTest extends TestLogger {
                 for (OperatorSubtaskState subtaskState : taskState.getStates()) {
                     for (KeyedStateHandle keyedStateHandle : subtaskState.getManagedKeyedState()) {
                         // check that all are registered with the old registry
-                        verify(keyedStateHandle, times(1)).registerSharedStates(instance);
+                        verify(keyedStateHandle, times(1))
+                                .registerSharedStates(
+                                        instance, completedCheckpoint.getCheckpointID());
                     }
                 }
             }
