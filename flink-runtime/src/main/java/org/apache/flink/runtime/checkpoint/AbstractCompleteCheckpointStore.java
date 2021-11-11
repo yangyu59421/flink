@@ -21,7 +21,9 @@ package org.apache.flink.runtime.checkpoint;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 
+import java.util.Deque;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * The abstract class of {@link CompletedCheckpointStore}, which holds the {@link
@@ -43,5 +45,23 @@ public abstract class AbstractCompleteCheckpointStore implements CompletedCheckp
     @Override
     public SharedStateRegistry getRegistry() {
         return sharedStateRegistry;
+    }
+
+    /**
+     * Unregister shared states that are no longer in use. Should be called after completing a
+     * checkpoint (even if no checkpoint was subsumed, so that state added by an aborted checkpoints
+     * and not used later can be removed).
+     */
+    protected void unregisterUnusedState(Deque<CompletedCheckpoint> unSubsumedCheckpoints) {
+        findLowest(unSubsumedCheckpoints).ifPresent(sharedStateRegistry::unregisterUnusedState);
+    }
+
+    private static Optional<Long> findLowest(Deque<CompletedCheckpoint> unSubsumedCheckpoints) {
+        for (CompletedCheckpoint p : unSubsumedCheckpoints) {
+            if (!p.getProperties().isSavepoint()) {
+                return Optional.of(p.getCheckpointID());
+            }
+        }
+        return Optional.empty();
     }
 }

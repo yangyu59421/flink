@@ -597,7 +597,7 @@ public class EmbeddedRocksDBStateBackendTest
                     // -----------------------------------------------------------------
 
                     if (previousStateHandles.size() > 1) {
-                        checkRemove(previousStateHandles.remove(), sharedStateRegistry);
+                        previousStateHandles.remove().discardState();
                     }
                 }
 
@@ -605,27 +605,12 @@ public class EmbeddedRocksDBStateBackendTest
 
                     reset(sharedStateRegistry);
 
-                    checkRemove(previousStateHandles.remove(), sharedStateRegistry);
+                    previousStateHandles.remove().discardState();
                 }
             } finally {
                 IOUtils.closeQuietly(backend);
                 backend.dispose();
             }
-        }
-    }
-
-    private void checkRemove(IncrementalRemoteKeyedStateHandle remove, SharedStateRegistry registry)
-            throws Exception {
-        for (StateHandleID id : remove.getSharedState().keySet()) {
-            verify(registry, times(0))
-                    .unregisterReference(remove.createSharedStateRegistryKeyFromFileName(id));
-        }
-
-        remove.discardState();
-
-        for (StateHandleID id : remove.getSharedState().keySet()) {
-            verify(registry)
-                    .unregisterReference(remove.createSharedStateRegistryKeyFromFileName(id));
         }
     }
 

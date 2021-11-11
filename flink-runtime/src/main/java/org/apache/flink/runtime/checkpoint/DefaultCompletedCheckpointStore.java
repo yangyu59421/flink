@@ -145,6 +145,7 @@ public class DefaultCompletedCheckpointStore<R extends ResourceVersion<R>>
                                 completedCheckpoint.shouldBeDiscardedOnSubsume(),
                                 checkpointsCleaner,
                                 postCleanup));
+        unregisterUnusedState(completedCheckpoints);
 
         LOG.debug("Added {} to {}.", checkpoint, path);
     }

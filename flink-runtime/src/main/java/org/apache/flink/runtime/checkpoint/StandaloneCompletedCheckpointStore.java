@@ -79,6 +79,8 @@ public class StandaloneCompletedCheckpointStore extends AbstractCompleteCheckpoi
 
         CheckpointSubsumeHelper.subsume(
                 checkpoints, maxNumberOfCheckpointsToRetain, CompletedCheckpoint::discardOnSubsume);
+
+        unregisterUnusedState(checkpoints);
     }
 
     @Override
