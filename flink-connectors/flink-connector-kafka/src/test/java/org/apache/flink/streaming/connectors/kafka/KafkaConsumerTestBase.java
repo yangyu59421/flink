@@ -87,6 +87,7 @@ import kafka.server.KafkaServer;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -318,15 +319,11 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBaseWithFlink {
         final int parallelism = 3;
         final int recordsInEachPartition = 50;
 
-        final String topicName =
-                writeSequence(
-                        "testAutoOffsetRetrievalAndCommitToKafkaTopic",
-                        recordsInEachPartition,
-                        parallelism,
-                        1);
+        final String topicName = "testAutoOffsetRetrievalAndCommitToKafkaTopic";
+
+        createTestTopic(topicName, parallelism, 1);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.getConfig().setRestartStrategy(RestartStrategies.noRestart());
         env.setParallelism(parallelism);
         env.enableCheckpointing(200);
 
@@ -354,6 +351,24 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBaseWithFlink {
                     }
                 };
         runner.start();
+
+        Thread.sleep(2 * 1000L);
+        Properties producerProperties =
+                FlinkKafkaProducerBase.getPropertiesFromBrokerList(brokerConnectionStrings);
+        producerProperties.setProperty("retries", "0");
+        producerProperties.setProperty(
+                "key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producerProperties.setProperty(
+                "value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producerProperties.putAll(secureProps);
+        KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(producerProperties);
+
+        for (int i = 0; i < parallelism; i++) {
+            for (int l = 0; l < recordsInEachPartition; l++) {
+                kafkaProducer.send(new ProducerRecord<>(topicName, i, "", String.valueOf(l)));
+            }
+        }
+        kafkaProducer.close();
 
         KafkaTestEnvironment.KafkaOffsetHandler kafkaOffsetHandler =
                 kafkaServer.createOffsetHandler();
