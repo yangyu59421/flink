@@ -50,30 +50,30 @@ Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])
 == Physical Execution Plan ==
 {
   "nodes" : [ {
-    "id" : 23,
+    "id" : ,
     "type" : "Source: TableSourceScan(table=[[default_catalog, default_database, source]], fields=[id, city_name])",
     "pact" : "Data Source",
     "contents" : "Source: TableSourceScan(table=[[default_catalog, default_database, source]], fields=[id, city_name])",
     "parallelism" : 1
   }, {
-    "id" : 24,
+    "id" : ,
     "type" : "NotNullEnforcer(fields=[id])",
     "pact" : "Operator",
     "contents" : "NotNullEnforcer(fields=[id])",
     "parallelism" : 1,
     "predecessors" : [ {
-      "id" : 23,
+      "id" : ,
       "ship_strategy" : "FORWARD",
       "side" : "second"
     } ]
   }, {
-    "id" : 26,
+    "id" : ,
     "type" : "Sink: Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])",
     "pact" : "Data Sink",
     "contents" : "Sink: Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])",
     "parallelism" : 9,
     "predecessors" : [ {
-      "id" : 24,
+      "id" : ,
       "ship_strategy" : "HASH",
       "side" : "second"
     } ]
@@ -99,30 +99,30 @@ Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])
 == Physical Execution Plan ==
 {
   "nodes" : [ {
-    "id" : 12,
+    "id" : ,
     "type" : "Source: TableSourceScan(table=[[default_catalog, default_database, source]], fields=[id, city_name])",
     "pact" : "Data Source",
     "contents" : "Source: TableSourceScan(table=[[default_catalog, default_database, source]], fields=[id, city_name])",
     "parallelism" : 4
   }, {
-    "id" : 13,
+    "id" : ,
     "type" : "NotNullEnforcer(fields=[id])",
     "pact" : "Operator",
     "contents" : "NotNullEnforcer(fields=[id])",
     "parallelism" : 4,
     "predecessors" : [ {
-      "id" : 12,
+      "id" : ,
       "ship_strategy" : "FORWARD",
       "side" : "second"
     } ]
   }, {
-    "id" : 15,
+    "id" : ,
     "type" : "Sink: Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])",
     "pact" : "Data Sink",
     "contents" : "Sink: Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])",
     "parallelism" : 4,
     "predecessors" : [ {
-      "id" : 13,
+      "id" : ,
       "ship_strategy" : "HASH",
       "side" : "second"
     } ]
@@ -148,30 +148,30 @@ Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])
 == Physical Execution Plan ==
 {
   "nodes" : [ {
-    "id" : 2,
+    "id" : ,
     "type" : "Source: TableSourceScan(table=[[default_catalog, default_database, source]], fields=[id, city_name])",
     "pact" : "Data Source",
     "contents" : "Source: TableSourceScan(table=[[default_catalog, default_database, source]], fields=[id, city_name])",
     "parallelism" : 1
   }, {
-    "id" : 3,
+    "id" : ,
     "type" : "NotNullEnforcer(fields=[id])",
     "pact" : "Operator",
     "contents" : "NotNullEnforcer(fields=[id])",
     "parallelism" : 1,
     "predecessors" : [ {
-      "id" : 2,
+      "id" : ,
       "ship_strategy" : "FORWARD",
       "side" : "second"
     } ]
   }, {
-    "id" : 4,
+    "id" : ,
     "type" : "Sink: Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])",
     "pact" : "Data Sink",
     "contents" : "Sink: Sink(table=[default_catalog.default_database.sink], fields=[id, city_name])",
     "parallelism" : 9,
     "predecessors" : [ {
-      "id" : 3,
+      "id" : ,
       "ship_strategy" : "REBALANCE",
       "side" : "second"
     } ]
