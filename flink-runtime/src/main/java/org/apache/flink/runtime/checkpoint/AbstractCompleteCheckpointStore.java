@@ -39,4 +39,9 @@ public abstract class AbstractCompleteCheckpointStore implements CompletedCheckp
             Map<OperatorID, OperatorState> operatorStates, long checkpointID) {
         sharedStateRegistry.registerAll(operatorStates.values(), checkpointID);
     }
+
+    @Override
+    public SharedStateRegistry getRegistry() {
+        return sharedStateRegistry;
+    }
 }

@@ -20,6 +20,7 @@ package org.apache.flink.runtime.checkpoint;
 
 import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.state.SharedStateRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,4 +108,6 @@ public interface CompletedCheckpointStore {
     boolean requiresExternalizedCheckpoints();
 
     void registerSharedState(Map<OperatorID, OperatorState> operatorStates, long checkpointID);
+
+    SharedStateRegistry getRegistry();
 }

@@ -1087,6 +1087,15 @@ public class CheckpointCoordinator {
 
             final PendingCheckpoint checkpoint = pendingCheckpoints.get(checkpointId);
 
+            if (message.getSubtaskState() != null) {
+                // Register shared state regardless of checkpoint state and task ACK state.
+                // This way, shared state is
+                // 1. kept if the message is late or state will be used by the task otherwise
+                // 2. removed eventually upon checkpoint subsumption (or job cancellation)
+                message.getSubtaskState()
+                        .registerSharedStates(completedCheckpointStore.getRegistry(), checkpointId);
+            }
+
             if (checkpoint != null && !checkpoint.isDisposed()) {
 
                 switch (checkpoint.acknowledgeTask(
@@ -1205,11 +1214,6 @@ public class CheckpointCoordinator {
             throws CheckpointException {
         final long checkpointId = pendingCheckpoint.getCheckpointId();
         final CompletedCheckpoint completedCheckpoint;
-
-        // As a first step to complete the checkpoint, we register its state with the registry
-        Map<OperatorID, OperatorState> operatorStates = pendingCheckpoint.getOperatorStates();
-        completedCheckpointStore.registerSharedState(
-                operatorStates, pendingCheckpoint.getCheckpointID());
 
         try {
             try {

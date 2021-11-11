@@ -20,6 +20,7 @@ package org.apache.flink.runtime.checkpoint;
 
 import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.state.SharedStateRegistry;
 
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,11 @@ public enum DeactivatedCheckpointCompletedCheckpointStore implements CompletedCh
     public void registerSharedState(
             Map<OperatorID, OperatorState> operatorStates, long checkpointID) {
         throw unsupportedOperationException();
+    }
+
+    @Override
+    public SharedStateRegistry getRegistry() {
+        return SharedStateRegistry.NO_OP;
     }
 
     private UnsupportedOperationException unsupportedOperationException() {
