@@ -24,6 +24,7 @@ import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.runtime.concurrent.ManuallyTriggeredScheduledExecutor;
 import org.apache.flink.runtime.state.RetrievableStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
+import org.apache.flink.runtime.state.SharedStateRegistryImpl;
 import org.apache.flink.runtime.testutils.CommonTestUtils;
 import org.apache.flink.runtime.util.ZooKeeperUtils;
 import org.apache.flink.runtime.zookeeper.ZooKeeperStateHandleStore;
@@ -103,7 +104,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
     @Test
     public void testRecover() throws Exception {
 
-        SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+        SharedStateRegistry sharedStateRegistry = new SharedStateRegistryImpl();
         CompletedCheckpointStore checkpoints = createRecoveredCompletedCheckpointStore(3);
 
         TestCompletedCheckpoint[] expected =
@@ -128,7 +129,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
 
         // Recover
         sharedStateRegistry.close();
-        sharedStateRegistry = new SharedStateRegistry();
+        sharedStateRegistry = new SharedStateRegistryImpl();
 
         assertEquals(3, ZOOKEEPER.getClient().getChildren().forPath(CHECKPOINT_PATH).size());
         assertEquals(3, checkpoints.getNumberOfRetainedCheckpoints());
@@ -156,7 +157,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
     public void testShutdownDiscardsCheckpoints() throws Exception {
         CuratorFramework client = ZOOKEEPER.getClient();
 
-        SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+        SharedStateRegistry sharedStateRegistry = new SharedStateRegistryImpl();
         CompletedCheckpointStore store = createRecoveredCompletedCheckpointStore(1);
         TestCompletedCheckpoint checkpoint = createCheckpoint(0, sharedStateRegistry);
 
@@ -192,7 +193,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
     public void testSuspendKeepsCheckpoints() throws Exception {
         CuratorFramework client = ZOOKEEPER.getClient();
 
-        SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+        SharedStateRegistry sharedStateRegistry = new SharedStateRegistryImpl();
         CompletedCheckpointStore store = createRecoveredCompletedCheckpointStore(1);
         TestCompletedCheckpoint checkpoint = createCheckpoint(0, sharedStateRegistry);
 
@@ -233,7 +234,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
     @Test
     public void testLatestCheckpointRecovery() throws Exception {
         final int numCheckpoints = 3;
-        SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+        SharedStateRegistry sharedStateRegistry = new SharedStateRegistryImpl();
         CompletedCheckpointStore checkpointStore =
                 createRecoveredCompletedCheckpointStore(numCheckpoints);
         List<CompletedCheckpoint> checkpoints = new ArrayList<>(numCheckpoints);
@@ -267,7 +268,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
         final CompletedCheckpointStore zkCheckpointStore1 =
                 createRecoveredCompletedCheckpointStore(numberOfCheckpoints);
 
-        SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+        SharedStateRegistry sharedStateRegistry = new SharedStateRegistryImpl();
 
         TestCompletedCheckpoint completedCheckpoint = createCheckpoint(1, sharedStateRegistry);
 
@@ -276,7 +277,7 @@ public class ZooKeeperCompletedCheckpointStoreITCase extends CompletedCheckpoint
 
         // recover the checkpoint by a different checkpoint store
         sharedStateRegistry.close();
-        sharedStateRegistry = new SharedStateRegistry();
+        sharedStateRegistry = new SharedStateRegistryImpl();
         final CompletedCheckpointStore zkCheckpointStore2 =
                 createRecoveredCompletedCheckpointStore(numberOfCheckpoints);
 
