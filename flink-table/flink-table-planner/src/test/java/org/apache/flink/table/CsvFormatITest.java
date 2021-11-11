@@ -52,12 +52,10 @@ import static org.apache.flink.table.api.DataTypes.STRING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 
 /** Test for {@link PushProjectIntoTableSourceScanRule}. */
-public class CsvFormatITest
-        extends PushProjectIntoLegacyTableSourceScanRuleTest {
+public class CsvFormatITest extends PushProjectIntoLegacyTableSourceScanRuleTest {
 
     @Rule public final SharedObjects sharedObjects = SharedObjects.create();
 
@@ -242,7 +240,7 @@ public class CsvFormatITest
         public static final Schema SCHEMA =
                 Schema.newBuilder()
                         .columnByMetadata("m1", STRING())
-                        .columnByMetadata("metadata", STRING(),   "m2")
+                        .columnByMetadata("metadata", STRING(), "m2")
                         .columnByMetadata("m3", STRING())
                         .build();
 

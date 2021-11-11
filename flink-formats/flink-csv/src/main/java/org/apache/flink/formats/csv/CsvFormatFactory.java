@@ -19,16 +19,22 @@
 package org.apache.flink.formats.csv;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.serialization.BulkWriter;
+import org.apache.flink.api.common.serialization.BulkWriter.Factory;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.impl.StreamFormatAdapter;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
+import org.apache.flink.formats.csv.RowDataToCsvConverters.RowDataToCsvFormatConverter;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.format.BulkDecodingFormat;
+import org.apache.flink.table.connector.format.EncodingFormat;
+import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.factories.BulkReaderFormatFactory;
+import org.apache.flink.table.factories.BulkWriterFormatFactory;
 import org.apache.flink.table.factories.DynamicTableFactory;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.RowType;
@@ -53,10 +59,41 @@ import static org.apache.flink.formats.csv.CsvFormatOptions.QUOTE_CHARACTER;
 
 /** CSV format factory for file system. */
 @Internal
-public class CsvFormatFactory implements BulkReaderFormatFactory {
+//public class CsvFormatFactory implements BulkReaderFormatFactory {
+public class CsvFormatFactory implements BulkReaderFormatFactory, BulkWriterFormatFactory {
+
+    public static final String IDENTIFIER = "csv";
 
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})  //TODO: is it possible to avoid?
+    public String factoryIdentifier() {
+        return IDENTIFIER;
+    }
+
+    @Override
+    public Set<ConfigOption<?>> requiredOptions() {
+        return new HashSet<>();
+    }
+
+    @Override
+    public Set<ConfigOption<?>> optionalOptions() {
+        Set<ConfigOption<?>> options = new HashSet<>();
+        options.add(FIELD_DELIMITER);
+        options.add(DISABLE_QUOTE_CHARACTER);
+        options.add(QUOTE_CHARACTER);
+        options.add(ALLOW_COMMENTS);
+        options.add(IGNORE_PARSE_ERRORS);
+        options.add(ARRAY_ELEMENT_DELIMITER);
+        options.add(ESCAPE_CHARACTER);
+        options.add(NULL_LITERAL);
+        return options;
+    }
+
+    // TODO: is it possible to avoid the cast with a reasonable effort?
+    @Override
+    @SuppressWarnings({
+        "unchecked",
+        "rawtypes"
+    })
     public BulkDecodingFormat<RowData> createDecodingFormat(
             DynamicTableFactory.Context context, ReadableConfig formatOptions) {
         return new BulkDecodingFormat<RowData>() {
@@ -85,31 +122,29 @@ public class CsvFormatFactory implements BulkReaderFormatFactory {
         };
     }
 
-    public static final String IDENTIFIER = "csv";
-
     @Override
-    public String factoryIdentifier() {
-        return IDENTIFIER;
+    public EncodingFormat<Factory<RowData>> createEncodingFormat(
+            DynamicTableFactory.Context context, ReadableConfig formatOptions) {
+        return new EncodingFormat<BulkWriter.Factory<RowData>>() {
+            @Override
+            public BulkWriter.Factory<RowData> createRuntimeEncoder(
+                    DynamicTableSink.Context context, DataType physicalDataType) {
+
+                RowType rowType = (RowType) physicalDataType.getLogicalType();
+                CsvSchema schema = buildCsvSchema(rowType, formatOptions);
+
+                RowDataToCsvFormatConverter converter =
+                        RowDataToCsvConverters.createRowFormatConverter(rowType);
+                return out -> new CsvBulkWriter(new CsvMapper(), schema, converter, out);
+            }
+
+            @Override
+            public ChangelogMode getChangelogMode() {
+                return ChangelogMode.insertOnly();
+            }
+        };
     }
 
-    @Override
-    public Set<ConfigOption<?>> requiredOptions() {
-        return new HashSet<>();
-    }
-
-    @Override
-    public Set<ConfigOption<?>> optionalOptions() {
-        Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(FIELD_DELIMITER);
-        options.add(DISABLE_QUOTE_CHARACTER);
-        options.add(QUOTE_CHARACTER);
-        options.add(ALLOW_COMMENTS);
-        options.add(IGNORE_PARSE_ERRORS);
-        options.add(ARRAY_ELEMENT_DELIMITER);
-        options.add(ESCAPE_CHARACTER);
-        options.add(NULL_LITERAL);
-        return options;
-    }
 
     private CsvSchema buildCsvSchema(RowType rowType, ReadableConfig options) {
         CsvSchema csvSchema = CsvRowSchemaConverter.convert(rowType);

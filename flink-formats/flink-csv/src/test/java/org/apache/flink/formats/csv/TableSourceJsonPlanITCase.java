@@ -33,6 +33,19 @@ import static org.apache.flink.table.utils.DateTimeUtils.unixTimestampToLocalDat
 /** Test for table source json plan. */
 public class TableSourceJsonPlanITCase extends CsvJsonPlanTestBase {
 
+
+    @Test
+    public void test() throws Exception {
+        List<String> data = Arrays.asList("1,1,hi", "2,1,hello", "3,2,hello world");
+        createTestCsvSourceTable("MyTable", data, "a bigint", "b int not null", "c varchar");
+        File sinkPath = createTestCsvSinkTable("MySink", "a bigint", "b int", "c varchar");
+
+        String jsonPlan = tableEnv.getJsonPlan("insert into MySink select a, b, c from MyTable");
+        tableEnv.executeJsonPlan(jsonPlan).await();
+
+        assertResult(Arrays.asList("1,1,hi", "2,1,hello", "3,2,hello world"), sinkPath);
+    }
+
     @Test
     public void testProjectPushDown() throws Exception {
         List<String> data = Arrays.asList("1,1,hi", "2,1,hello", "3,2,hello world");

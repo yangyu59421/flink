@@ -13,5 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-org.apache.flink.formats.csv.CsvDeserializerFactory
 org.apache.flink.formats.csv.CsvFormatFactory
