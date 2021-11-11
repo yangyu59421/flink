@@ -18,16 +18,12 @@
 
 package org.apache.flink.formats.csv;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.impl.StreamFormatAdapter;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.CsvMapper;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.format.BulkDecodingFormat;
 import org.apache.flink.table.connector.source.DynamicTableSource;
@@ -36,6 +32,12 @@ import org.apache.flink.table.factories.BulkReaderFormatFactory;
 import org.apache.flink.table.factories.DynamicTableFactory;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.RowType;
+
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.CsvSchema;
+
+import org.apache.commons.lang3.StringEscapeUtils;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -54,6 +56,7 @@ import static org.apache.flink.formats.csv.CsvFormatOptions.QUOTE_CHARACTER;
 public class CsvFormatFactory implements BulkReaderFormatFactory {
 
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})  //TODO: is it possible to avoid?
     public BulkDecodingFormat<RowData> createDecodingFormat(
             DynamicTableFactory.Context context, ReadableConfig formatOptions) {
         return new BulkDecodingFormat<RowData>() {

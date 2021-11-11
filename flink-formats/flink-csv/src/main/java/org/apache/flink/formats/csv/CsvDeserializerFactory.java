@@ -18,7 +18,6 @@
 
 package org.apache.flink.formats.csv;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
@@ -38,6 +37,8 @@ import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.factories.SerializationFormatFactory;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.RowType;
+
+import org.apache.commons.lang3.StringEscapeUtils;
 
 import java.util.Collections;
 import java.util.HashSet;
