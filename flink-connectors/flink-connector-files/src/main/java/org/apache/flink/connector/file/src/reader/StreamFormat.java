@@ -229,11 +229,6 @@ public interface StreamFormat<T> extends Serializable, ResultTypeQueryable<T> {
             long splitLength)
             throws IOException {
 
-        checkArgument(
-                restoredOffset >= 0,
-                "This method can be only called "
-                        + "when the supplied restoredOffset has a non-negative value. ");
-
         final FileSystem fileSystem = filePath.getFileSystem();
         final FileStatus fileStatus = fileSystem.getFileStatus(filePath);
         final FSDataInputStream inputStream = fileSystem.open(filePath);

@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.src.reader.StreamFormat;
+import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.fs.FSDataInputStream;
 
 import org.apache.avro.generic.GenericData;
@@ -39,6 +40,8 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 /** */
 public class AvroParquetRecordFormat<E> implements StreamFormat<E> {
@@ -74,21 +77,9 @@ public class AvroParquetRecordFormat<E> implements StreamFormat<E> {
                         .build());
     }
 
-    @VisibleForTesting
-    GenericData getDataModel() {
-        Class<E> typeClass = getProducedType().getTypeClass();
-        if (org.apache.avro.specific.SpecificRecordBase.class.isAssignableFrom(typeClass)) {
-            return SpecificData.get();
-        } else if (org.apache.avro.generic.GenericRecord.class.isAssignableFrom(typeClass)) {
-            return GenericData.get();
-        } else {
-            return ReflectData.get();
-        }
-    }
-
     /**
-     * Restores the reader from a checkpointed position. Since current version does not support
-     * splitting, {@code restoredOffset} will be used for seeking.
+     * Restores the reader from a checkpointed position. It is in fact identical since only {@link
+     * CheckpointedPosition#NO_OFFSET} as the {@code restoredOffset} is support.
      */
     @Override
     public Reader<E> restoreReader(
@@ -102,10 +93,23 @@ public class AvroParquetRecordFormat<E> implements StreamFormat<E> {
         // current version does not support splitting.
         checkNotSplit(fileLen, splitEnd);
 
-        // current version just ignore the splitOffset and use restoredOffset
-        stream.seek(restoredOffset);
+        checkArgument(
+                restoredOffset == CheckpointedPosition.NO_OFFSET,
+                "The restoredOffset should always be NO_OFFSET");
 
         return createReader(config, stream, fileLen, splitEnd);
+    }
+
+    @VisibleForTesting
+    GenericData getDataModel() {
+        Class<E> typeClass = getProducedType().getTypeClass();
+        if (org.apache.avro.specific.SpecificRecordBase.class.isAssignableFrom(typeClass)) {
+            return SpecificData.get();
+        } else if (org.apache.avro.generic.GenericRecord.class.isAssignableFrom(typeClass)) {
+            return GenericData.get();
+        } else {
+            return ReflectData.get();
+        }
     }
 
     /** Current version does not support splitting. */
@@ -141,19 +145,43 @@ public class AvroParquetRecordFormat<E> implements StreamFormat<E> {
 
         private final ParquetReader<E> parquetReader;
 
+        private final long offset;
+        private long skipCount;
+        private final boolean checkpointed;
+
         private AvroParquetRecordReader(ParquetReader<E> parquetReader) {
+            this(parquetReader, CheckpointedPosition.NO_OFFSET, 0, false);
+        }
+
+        private AvroParquetRecordReader(
+                ParquetReader<E> parquetReader, long offset, long skipCount, boolean checkpointed) {
             this.parquetReader = parquetReader;
+            this.offset = offset;
+            this.skipCount = skipCount;
+            this.checkpointed = checkpointed;
         }
 
         @Nullable
         @Override
         public E read() throws IOException {
-            return parquetReader.read();
+            E record = parquetReader.read();
+            incrementPosition();
+            return record;
         }
 
         @Override
         public void close() throws IOException {
             parquetReader.close();
+        }
+
+        @Nullable
+        @Override
+        public CheckpointedPosition getCheckpointedPosition() {
+            return checkpointed ? new CheckpointedPosition(offset, skipCount) : null;
+        }
+
+        private void incrementPosition() {
+            skipCount++;
         }
     }
 

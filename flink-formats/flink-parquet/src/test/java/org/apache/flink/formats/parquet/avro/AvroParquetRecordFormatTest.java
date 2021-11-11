@@ -171,7 +171,7 @@ class AvroParquetRecordFormatTest {
     }
 
     @Test
-    void testRestoreGenericReaderWithNoOffset() {
+    void testRestoreGenericReaderWithWrongOffset() {
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -179,7 +179,7 @@ class AvroParquetRecordFormatTest {
                                 .restoreReader(
                                         new Configuration(),
                                         userPath,
-                                        CheckpointedPosition.NO_OFFSET,
+                                        10,
                                         0,
                                         userPath.getFileSystem().getFileStatus(userPath).getLen()));
     }
@@ -191,33 +191,11 @@ class AvroParquetRecordFormatTest {
                         .restoreReader(
                                 new Configuration(),
                                 userPath,
-                                0,
+                                CheckpointedPosition.NO_OFFSET,
                                 0,
                                 userPath.getFileSystem().getFileStatus(userPath).getLen());
         for (GenericRecord record : userRecords) {
             assertUserEquals(Objects.requireNonNull(reader.read()), record);
-        }
-    }
-
-    /**
-     * Test {@link AvroParquetRecordFormat#restoreReader(Configuration, Path, long, long, long)}
-     * with a given restoredOffset. Expect to begin the read with the second record.
-     *
-     * @throws IOException thrown if the file system could not be retrieved
-     */
-    @Test
-    void testRestoreGenericReaderWithOffset() throws IOException {
-        StreamFormat.Reader<GenericRecord> reader =
-                AvroParquetReaders.forGenericRecord(schema)
-                        .restoreReader(
-                                new Configuration(),
-                                userPath,
-                                147,
-                                0,
-                                userPath.getFileSystem().getFileStatus(userPath).getLen());
-        for (int i = 1; i < userRecords.size(); i++) {
-            // TODO (Jing) failed now.
-            // assertUserEquals(reader.read(), records.get(i));
         }
     }
 
