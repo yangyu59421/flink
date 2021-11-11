@@ -20,6 +20,7 @@ package org.apache.flink.util;
 
 import org.slf4j.Logger;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -240,6 +241,35 @@ public final class IOUtils {
                         closeable.close();
                     }
                 } catch (Exception e) {
+                    collectedExceptions = ExceptionUtils.firstOrSuppressed(e, collectedExceptions);
+                }
+            }
+
+            if (null != collectedExceptions) {
+                throw collectedExceptions;
+            }
+        }
+    }
+
+    /**
+     * Closes all {@link Closeable} objects in the parameter, suppressing exceptions. Exception will
+     * be emitted after calling close() on every object.
+     *
+     * @param closeables iterable with closeables to close.
+     * @throws IOException collected exceptions that occurred during closing
+     */
+    public static void closeAllCloseable(Iterable<? extends Closeable> closeables)
+            throws IOException {
+        if (null != closeables) {
+
+            IOException collectedExceptions = null;
+
+            for (Closeable closeable : closeables) {
+                try {
+                    if (null != closeable) {
+                        closeable.close();
+                    }
+                } catch (IOException e) {
                     collectedExceptions = ExceptionUtils.firstOrSuppressed(e, collectedExceptions);
                 }
             }
