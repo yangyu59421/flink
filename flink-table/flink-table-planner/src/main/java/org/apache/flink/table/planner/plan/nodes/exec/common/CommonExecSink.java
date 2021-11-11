@@ -136,11 +136,8 @@ public abstract class CommonExecSink extends ExecNodeBase<Object>
                             inputParallelism));
         }
 
-        // only add materialization if not single parallelism or input has change
-        final boolean needMaterialization =
-                !inputInsertOnly
-                        && !(inputParallelism == 1 && sinkParallelism == 1)
-                        && upsertMaterialize;
+        // only add materialization if input has change
+        final boolean needMaterialization = !inputInsertOnly && upsertMaterialize;
 
         Transformation<RowData> sinkTransform =
                 applyNotNullEnforcer(inputTransform, planner.getTableConfig(), physicalRowType);
