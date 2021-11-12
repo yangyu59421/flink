@@ -378,7 +378,7 @@
         }
       } ]
     },
-    "description" : "WindowAggregate(groupBy=[b], window=[HOP(time_col=[proctime], size=[10 min], slide=[5 min])], select=[b, SUM(a) AS EXPR$1, start('w$) AS window_start, end('w$) AS window_end])"
+    "description" : "WindowAggregate(groupBy=[b], window=[HOP(time_col=[proctime], size=[10 m], slide=[5 m])], select=[b, SUM(a) AS EXPR$1, start('w$) AS window_start, end('w$) AS window_end])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {

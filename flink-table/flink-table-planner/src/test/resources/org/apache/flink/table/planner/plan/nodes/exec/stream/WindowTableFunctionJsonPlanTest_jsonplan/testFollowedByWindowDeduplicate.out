@@ -275,7 +275,7 @@
         }
       } ]
     },
-    "description" : "WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min])], emitPerRecord=[true])"
+    "description" : "WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m])], emitPerRecord=[true])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {
@@ -472,7 +472,7 @@
         }
       } ]
     },
-    "description" : "WindowDeduplicate(window=[TUMBLE(win_start=[window_start], win_end=[window_end], size=[15 min])], keep=[LastRow], partitionKeys=[a], orderKey=[rowtime], order=[ROWTIME])"
+    "description" : "WindowDeduplicate(window=[TUMBLE(win_start=[window_start], win_end=[window_end], size=[15 m])], keep=[LastRow], partitionKeys=[a], orderKey=[rowtime], order=[ROWTIME])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {

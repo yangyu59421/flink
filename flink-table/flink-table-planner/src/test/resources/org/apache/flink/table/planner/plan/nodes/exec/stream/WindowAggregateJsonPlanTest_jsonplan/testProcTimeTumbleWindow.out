@@ -366,7 +366,7 @@
         }
       } ]
     },
-    "description" : "WindowAggregate(groupBy=[b], window=[TUMBLE(time_col=[proctime], size=[15 min])], select=[b, COUNT(*) AS EXPR$2, start('w$) AS window_start, end('w$) AS window_end])"
+    "description" : "WindowAggregate(groupBy=[b], window=[TUMBLE(time_col=[proctime], size=[15 m])], select=[b, COUNT(*) AS EXPR$2, start('w$) AS window_start, end('w$) AS window_end])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {

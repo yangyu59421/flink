@@ -241,7 +241,7 @@
         }
       } ]
     },
-    "description" : "WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min])], emitPerRecord=[true])"
+    "description" : "WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m])], emitPerRecord=[true])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {
@@ -622,7 +622,7 @@
         }
       } ]
     },
-    "description" : "WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min])], emitPerRecord=[true])"
+    "description" : "WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m])], emitPerRecord=[true])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {
@@ -862,7 +862,7 @@
         "c0" : "VARCHAR(2147483647)"
       } ]
     },
-    "description" : "WindowJoin(leftWindow=[TUMBLE(win_start=[window_start], win_end=[window_end], size=[15 min])], rightWindow=[TUMBLE(win_start=[window_start], win_end=[window_end], size=[15 min])], joinType=[InnerJoin], where=[(a = a0)], select=[window_start, window_end, a, b, c, window_start0, window_end0, a0, b0, c0])"
+    "description" : "WindowJoin(leftWindow=[TUMBLE(win_start=[window_start], win_end=[window_end], size=[15 m])], rightWindow=[TUMBLE(win_start=[window_start], win_end=[window_end], size=[15 m])], joinType=[InnerJoin], where=[(a = a0)], select=[window_start, window_end, a, b, c, window_start0, window_end0, a0, b0, c0])"
   }, {
     "class" : "org.apache.flink.table.planner.plan.nodes.exec.stream.StreamExecCalc",
     "projection" : [ {

@@ -58,7 +58,7 @@ import scala.collection.mutable.ArrayBuffer
  * We will get part of the initial physical plan like following:
  * {{{
  * WindowAggregate(groupBy=[$f4, $f5], window=[TUMBLE(win_start=[window_start],
- * win_end=[window_end], size=[15 min])], select=[$f4, $f5, COUNT(DISTINCT a) FILTER $g_1 AS $f2,
+ * win_end=[window_end], size=[15 m])], select=[$f4, $f5, COUNT(DISTINCT a) FILTER $g_1 AS $f2,
  * COUNT(DISTINCT c) FILTER $g_2 AS $f3, start('w$) AS window_start, end('w$) AS window_end])
  * +- Exchange(distribution=[hash[$f4, $f5]])
  *    +- Calc(select=[window_start, window_end, a, c, $f4, $f5, =($e, 1) AS $g_1, =($e, 2) AS $g_2])
@@ -66,7 +66,7 @@ import scala.collection.mutable.ArrayBuffer
  *       {window_start, window_end, a, c, null AS $f4, $f5, 2 AS $e}])
  *          +- Calc(select=[window_start, window_end, a, c,
  *          MOD(HASH_CODE(a), 1024) AS $f4, MOD(HASH_CODE(c), 1024) AS $f5])
- *             +- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min])])
+ *             +- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m])])
  * }}}
  *
  * However, it can't match [[PullUpWindowTableFunctionIntoWindowAggregateRule]], because
@@ -77,11 +77,11 @@ import scala.collection.mutable.ArrayBuffer
  *
  * {{{
  * WindowAggregate(groupBy=[$f4, $f5], window=[TUMBLE(win_start=[window_start],
- * win_end=[window_end], size=[15 min])], select=[$f4, $f5, COUNT(DISTINCT a) FILTER $g_1 AS $f2,
+ * win_end=[window_end], size=[15 m])], select=[$f4, $f5, COUNT(DISTINCT a) FILTER $g_1 AS $f2,
  * COUNT(DISTINCT c) FILTER $g_2 AS $f3, start('w$) AS window_start, end('w$) AS window_end])
  * +- Exchange(distribution=[hash[$f4, $f5]])
  *   +- Calc(select=[window_start, window_end, a, c, $f4, $f5, ($e = 1) AS $g_1, ($e = 2) AS $g_2])
- *     +- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min])])
+ *     +- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m])])
  *       +- Expand(...)
  * }}}
  * </pre>

@@ -42,7 +42,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[CUMULATE(time_col=[rowtime], max_size=[15 min], step=[1 min], offset=[-5 min])])
++- WindowTableFunction(window=[CUMULATE(time_col=[rowtime], max_size=[15 m], step=[1 m], offset=[-5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -70,7 +70,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, PROCTIME_MATERIALIZE(window_time) AS window_time])
-+- WindowTableFunction(window=[CUMULATE(time_col=[proctime], max_size=[1 h], step=[10 min])])
++- WindowTableFunction(window=[CUMULATE(time_col=[proctime], max_size=[1 h], step=[10 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -103,7 +103,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[CUMULATE(time_col=[rowtime], max_size=[15 min], step=[1 min], offset=[5 min])])
++- WindowTableFunction(window=[CUMULATE(time_col=[rowtime], max_size=[15 m], step=[1 m], offset=[5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -131,7 +131,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[HOP(time_col=[rowtime], size=[10 min], slide=[5 min])])
++- WindowTableFunction(window=[HOP(time_col=[rowtime], size=[10 m], slide=[5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -164,7 +164,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[HOP(time_col=[rowtime], size=[15 min], slide=[1 min], offset=[-5 min])])
++- WindowTableFunction(window=[HOP(time_col=[rowtime], size=[15 m], slide=[1 m], offset=[-5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -197,7 +197,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[HOP(time_col=[rowtime], size=[15 min], slide=[1 min], offset=[5 min])])
++- WindowTableFunction(window=[HOP(time_col=[rowtime], size=[15 m], slide=[1 m], offset=[5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -224,7 +224,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min])])
++- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -251,7 +251,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, PROCTIME_MATERIALIZE(window_time) AS window_time])
-+- WindowTableFunction(window=[TUMBLE(time_col=[proctime], size=[15 min])])
++- WindowTableFunction(window=[TUMBLE(time_col=[proctime], size=[15 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -279,7 +279,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min], offset=[5 min])])
++- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m], offset=[5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])
@@ -307,7 +307,7 @@ LogicalProject(a=[$0], b=[$1], c=[$2], d=[$3], rowtime=[$4], proctime=[$5], wind
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, c, d, rowtime, PROCTIME_MATERIALIZE(proctime) AS proctime, window_start, window_end, window_time])
-+- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 min], offset=[-5 min])])
++- WindowTableFunction(window=[TUMBLE(time_col=[rowtime], size=[15 m], offset=[-5 m])])
    +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
       +- Calc(select=[a, b, c, d, rowtime, PROCTIME() AS proctime])
          +- TableSourceScan(table=[[default_catalog, default_database, MyTable]], fields=[a, b, c, d, rowtime])

@@ -133,7 +133,7 @@ class WindowTableFunctionTest extends TableTestBase {
         |""".stripMargin
 
     thrown.expectMessage("Currently Flink doesn't support individual window " +
-      "table-valued function TUMBLE(time_col=[rowtime], size=[15 min]).\n " +
+      "table-valued function TUMBLE(time_col=[rowtime], size=[15 m]).\n " +
       "Please use window table-valued function with the following computations:\n" +
       "1. aggregate using window_start and window_end as group keys.\n" +
       "2. topN using window_start and window_end as partition key.\n" +

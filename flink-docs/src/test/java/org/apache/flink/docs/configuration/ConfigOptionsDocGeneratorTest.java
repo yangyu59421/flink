@@ -157,7 +157,7 @@ public class ConfigOptionsDocGeneratorTest {
                         + "    <tbody>\n"
                         + "        <tr>\n"
                         + "            <td><h5>option.duration</h5></td>\n"
-                        + "            <td style=\"word-wrap: break-word;\">1 min</td>\n"
+                        + "            <td style=\"word-wrap: break-word;\">1 m</td>\n"
                         + "            <td>Duration</td>\n"
                         + "            <td>Description</td>\n"
                         + "        </tr>\n"
