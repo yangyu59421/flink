@@ -35,11 +35,11 @@ public class TimeUtilsPrettyPrintingTest extends TestLogger {
         return new Object[][] {
             new Object[] {Duration.ofMinutes(3).plusSeconds(30), "210 s"},
             new Object[] {Duration.ofNanos(100), "100 ns"},
-            new Object[] {Duration.ofSeconds(120), "2 min"},
+            new Object[] {Duration.ofSeconds(120), "2 m"},
             new Object[] {Duration.ofMillis(200), "200 ms"},
             new Object[] {Duration.ofHours(1).plusSeconds(3), "3603 s"},
             new Object[] {Duration.ofSeconds(0), "0 ms"},
-            new Object[] {Duration.ofMillis(60000), "1 min"}
+            new Object[] {Duration.ofMillis(60000), "1 m"}
         };
     }
 
