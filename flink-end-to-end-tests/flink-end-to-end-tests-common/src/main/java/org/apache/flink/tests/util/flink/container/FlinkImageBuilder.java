@@ -60,36 +60,58 @@ public class FlinkImageBuilder {
     private Duration timeout = DEFAULT_TIMEOUT;
     private String startupCommand;
 
-    public FlinkImageBuilder withImageName(String imageName) {
+    /**
+     * Sets the name of building image.
+     *
+     * <p>If the name is not specified, {@link #DEFAULT_IMAGE_NAME} will be used.
+     */
+    public FlinkImageBuilder setImageName(String imageName) {
         this.imageName = imageName;
         return this;
     }
 
-    public FlinkImageBuilder withFlinkDist(Path flinkDist) {
+    /**
+     * Sets the path of flink-dist directory.
+     *
+     * <p>If path is not specified, the dist directory under current project will be used.
+     */
+    public FlinkImageBuilder setFlinkDistPath(Path flinkDist) {
         this.flinkDist = flinkDist;
         return this;
     }
 
-    public FlinkImageBuilder withJavaVersion(String javaVersion) {
+    /**
+     * Sets JDK version in the image.
+     *
+     * <p>If version is not specified, the JDK version of the current JVM will be used.
+     */
+    public FlinkImageBuilder setJavaVersion(String javaVersion) {
         this.javaVersion = javaVersion;
         return this;
     }
 
-    public FlinkImageBuilder withConfiguration(Configuration conf) {
+    /**
+     * Sets Flink configuration. This configuration will be used for generating flink-conf.yaml for
+     * configuring JobManager and TaskManager.
+     */
+    public FlinkImageBuilder setConfiguration(Configuration conf) {
         this.conf = conf;
         return this;
     }
 
+    /** Copies file into the image. */
     public FlinkImageBuilder copyFile(Path localPath, Path containerPath) {
         filesToCopy.put(localPath, containerPath);
         return this;
     }
 
-    public FlinkImageBuilder withTimeout(Duration timeout) {
+    /** Sets timeout for building the image. */
+    public FlinkImageBuilder setTimeout(Duration timeout) {
         this.timeout = timeout;
         return this;
     }
 
+    /** Use this image for building a JobManager. */
     public FlinkImageBuilder asJobManager() {
         checkStartupCommandNotSet();
         this.startupCommand = "flink/bin/jobmanager.sh start-foreground && tail -f /dev/null";
@@ -97,6 +119,7 @@ public class FlinkImageBuilder {
         return this;
     }
 
+    /** Use this image for building a TaskManager. */
     public FlinkImageBuilder asTaskManager() {
         checkStartupCommandNotSet();
         this.startupCommand = "flink/bin/taskmanager.sh start-foreground && tail -f /dev/null";
@@ -104,6 +127,15 @@ public class FlinkImageBuilder {
         return this;
     }
 
+    /** Use a custom command for starting up the container. */
+    public FlinkImageBuilder useCustomStartupCommand(String command) {
+        checkStartupCommandNotSet();
+        this.startupCommand = command;
+        this.imageNameSuffix = "custom";
+        return this;
+    }
+
+    /** Build the image. */
     public ImageFromDockerfile build() throws TimeoutException, IOException {
         sanityCheck();
         // Build base image first

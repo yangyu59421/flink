@@ -81,20 +81,20 @@ public class KinesisTableApiITCase extends TestLogger {
     private KinesisPubsubClient kinesisClient;
 
     public static final FlinkContainer FLINK =
-            FlinkContainer.builder(1)
-                    .withEnv("AWS_ACCESS_KEY_ID", KINESALITE.getAccessKey())
-                    .withEnv("AWS_SECRET_KEY", KINESALITE.getSecretKey())
-                    .withEnv("AWS_CBOR_DISABLE", "1")
-                    .withEnv(
+            FlinkContainer.builder()
+                    .setEnvironmentVariable("AWS_ACCESS_KEY_ID", KINESALITE.getAccessKey())
+                    .setEnvironmentVariable("AWS_SECRET_KEY", KINESALITE.getSecretKey())
+                    .setEnvironmentVariable("AWS_CBOR_DISABLE", "1")
+                    .setEnvironmentVariable(
                             "FLINK_ENV_JAVA_OPTS",
                             "-Dorg.apache.flink.kinesis.shaded.com.amazonaws.sdk.disableCertChecking")
-                    .withNetwork(network)
-                    .withLogger(LOGGER)
+                    .setNetwork(network)
+                    .setLogger(LOGGER)
                     .dependsOn(KINESALITE)
                     .build();
 
     @BeforeClass
-    public static void setupFlink() {
+    public static void setupFlink() throws Exception {
         FLINK.start();
     }
 

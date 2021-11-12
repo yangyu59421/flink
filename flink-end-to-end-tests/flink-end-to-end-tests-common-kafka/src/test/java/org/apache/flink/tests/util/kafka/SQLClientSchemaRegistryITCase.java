@@ -92,13 +92,13 @@ public class SQLClientSchemaRegistryITCase {
                     .dependsOn(kafka);
 
     public final FlinkContainer flink =
-            FlinkContainer.builder(1).withNetwork(network).withLogger(LOG).dependsOn(kafka).build();
+            FlinkContainer.builder().setNetwork(network).setLogger(LOG).dependsOn(kafka).build();
 
     private KafkaContainerClient kafkaClient;
     private CachedSchemaRegistryClient registryClient;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         flink.start();
         kafkaClient = new KafkaContainerClient(kafka);
         registryClient = new CachedSchemaRegistryClient(registry.getSchemaRegistryUrl(), 10);

@@ -52,15 +52,17 @@ public class FlinkContainerTestEnvironment implements TestEnvironment, ClusterCo
         flinkConfiguration.set(NUM_TASK_SLOTS, numSlotsPerTaskManager);
 
         this.flinkContainer =
-                FlinkContainer.builder(numTaskManagers)
-                        .withConfiguration(flinkConfiguration)
-                        .withLogger(LOG)
+                FlinkContainer.builder()
+                        .numTaskManagers(numTaskManagers)
+                        .setConfiguration(flinkConfiguration)
+                        .setLogger(LOG)
+                        .enableHAService()
                         .build();
         this.jarPath = jarPath;
     }
 
     @Override
-    public void startUp() {
+    public void startUp() throws Exception {
         if (!flinkContainer.isRunning()) {
             this.flinkContainer.start();
         }
@@ -82,7 +84,10 @@ public class FlinkContainerTestEnvironment implements TestEnvironment, ClusterCo
     }
 
     @Override
-    public void triggerJobManagerFailover(JobClient jobClient, Runnable afterFailAction) {}
+    public void triggerJobManagerFailover(JobClient jobClient, Runnable afterFailAction)
+            throws Exception {
+        flinkContainer.restartJobManager(afterFailAction::run);
+    }
 
     @Override
     public void triggerTaskManagerFailover(JobClient jobClient, Runnable afterFailAction)

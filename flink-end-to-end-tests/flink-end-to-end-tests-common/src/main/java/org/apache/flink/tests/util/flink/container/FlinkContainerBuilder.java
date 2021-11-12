@@ -18,7 +18,9 @@
 
 package org.apache.flink.tests.util.flink.container;
 
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.HighAvailabilityOptions;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -29,71 +31,125 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /** A builder class for {@link FlinkContainer}. */
 public class FlinkContainerBuilder {
 
-    private final int numTaskManagers;
     private final List<GenericContainer<?>> dependentContainers = new ArrayList<>();
     private final Configuration conf = new Configuration();
     private final Map<String, String> envVars = new HashMap<>();
 
+    private int numTaskManagers = 1;
     private Network network = Network.newNetwork();
     private Logger logger;
+    private boolean enableHAService = false;
 
-    public FlinkContainerBuilder(int numTaskManagers) {
+    /** Sets number of TaskManagers. */
+    public FlinkContainerBuilder numTaskManagers(int numTaskManagers) {
         this.numTaskManagers = numTaskManagers;
+        return this;
     }
 
-    public FlinkContainerBuilder withConfiguration(Configuration conf) {
+    /** Sets configuration of the cluster. */
+    public FlinkContainerBuilder setConfiguration(Configuration conf) {
         this.conf.addAll(conf);
         return this;
     }
 
+    /**
+     * Lets Flink cluster depending on another container, and bind the network of Flink cluster to
+     * the dependent one.
+     */
     public FlinkContainerBuilder dependsOn(GenericContainer<?> container) {
         container.withNetwork(this.network);
         this.dependentContainers.add(container);
         return this;
     }
 
-    public FlinkContainerBuilder withEnv(String key, String value) {
+    /** Sets environment variable to containers. */
+    public FlinkContainerBuilder setEnvironmentVariable(String key, String value) {
         this.envVars.put(key, value);
         return this;
     }
 
-    public FlinkContainerBuilder withNetwork(Network network) {
+    /** Sets network of the Flink cluster. */
+    public FlinkContainerBuilder setNetwork(Network network) {
         this.network = network;
         return this;
     }
 
-    public FlinkContainerBuilder withLogger(Logger logger) {
+    /** Sets a logger to the cluster in order to consume STDOUT of containers to the logger. */
+    public FlinkContainerBuilder setLogger(Logger logger) {
         this.logger = logger;
         return this;
     }
 
+    /** Enables high availability service. */
+    public FlinkContainerBuilder enableHAService() {
+        this.enableHAService = true;
+        return this;
+    }
+
+    /** Builds {@link FlinkContainer}. */
     public FlinkContainer build() {
+        GenericContainer<?> haService = null;
+        if (enableHAService) {
+            enableHAServiceConfigurations();
+            haService = buildZookeeperContainer();
+        }
+
+        this.conf.set(JobManagerOptions.ADDRESS, FlinkContainer.JOB_MANAGER_HOSTNAME);
+        this.conf.set(
+                CheckpointingOptions.CHECKPOINTS_DIRECTORY,
+                FlinkContainer.CHECKPOINT_PATH.toAbsolutePath().toUri().toString());
+
         final GenericContainer<?> jobManager = buildJobManagerContainer();
         final List<GenericContainer<?>> taskManagers = buildTaskManagerContainers();
-        return new FlinkContainer(jobManager, taskManagers, conf);
+
+        if (enableHAService) {
+            try {
+                Path recoveryPath = Files.createTempDirectory("flink-recovery");
+                jobManager.withFileSystemBind(
+                        recoveryPath.toAbsolutePath().toString(),
+                        FlinkContainer.HA_STORAGE_PATH.toAbsolutePath().toString());
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to create temporary recovery directory", e);
+            }
+        }
+
+        try {
+            Path checkpointPath = Files.createTempDirectory("flink-checkpoint");
+            jobManager.withFileSystemBind(
+                    checkpointPath.toAbsolutePath().toString(),
+                    FlinkContainer.CHECKPOINT_PATH.toAbsolutePath().toString());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to create temporary checkpoint directory", e);
+        }
+
+        return new FlinkContainer(jobManager, taskManagers, haService, conf);
     }
+
+    // --------------------------- Helper Functions -------------------------------------
 
     private GenericContainer<?> buildJobManagerContainer() {
         // Configure JobManager
         final Configuration jobManagerConf = new Configuration();
         jobManagerConf.addAll(this.conf);
-        jobManagerConf.set(JobManagerOptions.ADDRESS, FlinkContainer.JOB_MANAGER_HOSTNAME);
         // Build JobManager container
         final ImageFromDockerfile jobManagerImage;
         try {
             jobManagerImage =
-                    new FlinkImageBuilder()
-                            .withConfiguration(jobManagerConf)
-                            .asJobManager()
-                            .build();
+                    new FlinkImageBuilder().setConfiguration(jobManagerConf).asJobManager().build();
         } catch (Exception e) {
             throw new RuntimeException("Failed to build JobManager image", e);
         }
@@ -117,7 +173,6 @@ public class FlinkContainerBuilder {
             // Configure TaskManager
             final Configuration taskManagerConf = new Configuration();
             taskManagerConf.addAll(this.conf);
-            taskManagerConf.set(JobManagerOptions.ADDRESS, FlinkContainer.JOB_MANAGER_HOSTNAME);
             final String taskManagerHostName = FlinkContainer.TASK_MANAGER_HOSTNAME_PREFIX + i;
             taskManagerConf.set(TaskManagerOptions.HOST, taskManagerHostName);
             // Build TaskManager container
@@ -125,7 +180,7 @@ public class FlinkContainerBuilder {
             try {
                 taskManagerImage =
                         new FlinkImageBuilder()
-                                .withConfiguration(taskManagerConf)
+                                .setConfiguration(taskManagerConf)
                                 .asTaskManager()
                                 .build();
             } catch (Exception e) {
@@ -144,12 +199,50 @@ public class FlinkContainerBuilder {
         return taskManagers;
     }
 
+    private GenericContainer<?> buildZookeeperContainer() {
+        final ImageFromDockerfile zookeeperImage;
+        try {
+            zookeeperImage =
+                    new FlinkImageBuilder()
+                            .setConfiguration(this.conf)
+                            .useCustomStartupCommand(
+                                    "flink/bin/zookeeper.sh start-foreground 1 && tail -f /dev/null")
+                            .setImageName("flink-zookeeper")
+                            .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build Zookeeper image", e);
+        }
+        final GenericContainer<?> zookeeper = buildContainer(zookeeperImage);
+        // Setup network for Zookeeper
+        zookeeper.withNetworkAliases(FlinkContainer.ZOOKEEPER_HOSTNAME);
+        // Setup logger
+        if (this.logger != null) {
+            zookeeper.withLogConsumer(new Slf4jLogConsumer(this.logger).withPrefix("Zookeeper"));
+        }
+        return zookeeper;
+    }
+
     private GenericContainer<?> buildContainer(ImageFromDockerfile image) {
         final GenericContainer<?> container = new GenericContainer<>(image);
         for (GenericContainer<?> dependentContainer : dependentContainers) {
             container.dependsOn(dependentContainer);
         }
+        // Bind network to container
         container.withNetwork(this.network);
         return container;
+    }
+
+    private void enableHAServiceConfigurations() {
+        // Set HA related configurations
+        checkNotNull(this.conf, "Configuration should not be null for setting HA service");
+        conf.set(HighAvailabilityOptions.HA_MODE, "zookeeper");
+        conf.set(
+                HighAvailabilityOptions.HA_ZOOKEEPER_QUORUM,
+                FlinkContainer.ZOOKEEPER_HOSTNAME + ":" + "2181");
+        conf.set(HighAvailabilityOptions.HA_ZOOKEEPER_ROOT, "/flink");
+        conf.set(HighAvailabilityOptions.HA_CLUSTER_ID, "flink-container-" + UUID.randomUUID());
+        conf.set(
+                HighAvailabilityOptions.HA_STORAGE_PATH,
+                FlinkContainer.HA_STORAGE_PATH.toUri().toString());
     }
 }

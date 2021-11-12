@@ -22,13 +22,13 @@ import org.apache.flink.client.deployment.StandaloneClusterId;
 import org.apache.flink.client.program.rest.RestClusterClient;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
-import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersHeaders;
-import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersInfo;
+import org.apache.flink.core.testutils.CommonTestUtils;
+import org.apache.flink.runtime.rest.handler.legacy.messages.ClusterOverviewWithVersion;
+import org.apache.flink.runtime.rest.messages.ClusterOverviewHeaders;
+import org.apache.flink.runtime.rest.messages.EmptyMessageParameters;
+import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.tests.util.flink.SQLJobSubmission;
 import org.apache.flink.util.function.RunnableWithException;
-
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -37,54 +37,75 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.containers.wait.strategy.WaitStrategy;
 import org.testcontainers.utility.MountableFile;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.flink.util.Preconditions.checkState;
 
 /** A Flink cluster running JM and TM on containers. */
 public class FlinkContainer implements BeforeAllCallback, AfterAllCallback {
-
     private static final Logger LOG = LoggerFactory.getLogger(FlinkContainer.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    // Hostname of components within container network
     public static final String JOB_MANAGER_HOSTNAME = "jobmanager";
     public static final String TASK_MANAGER_HOSTNAME_PREFIX = "taskmanager-";
+    public static final String ZOOKEEPER_HOSTNAME = "zookeeper";
+
+    // Directories for storing states
+    public static final Path CHECKPOINT_PATH = Paths.get("/flink/checkpoint");
+    public static final Path HA_STORAGE_PATH = Paths.get("/flink/recovery");
 
     private final GenericContainer<?> jobManager;
     private final List<GenericContainer<?>> taskManagers;
+    private final GenericContainer<?> haService;
     private final Configuration conf;
 
     private RestClusterClient<StandaloneClusterId> restClusterClient;
     private boolean isRunning;
 
+    /** Creates a builder for {@link FlinkContainer}. */
+    public static FlinkContainerBuilder builder() {
+        return new FlinkContainerBuilder();
+    }
+
     FlinkContainer(
             GenericContainer<?> jobManager,
             List<GenericContainer<?>> taskManagers,
+            @Nullable GenericContainer<?> haService,
             Configuration conf) {
         this.jobManager = jobManager;
         this.taskManagers = taskManagers;
+        this.haService = haService;
         this.conf = conf;
     }
 
-    public static FlinkContainerBuilder builder(int numTaskManagers) {
-        return new FlinkContainerBuilder(numTaskManagers);
-    }
-
-    public void start() {
+    /** Starts all containers. */
+    public void start() throws Exception {
+        if (haService != null) {
+            LOG.debug("Starting HA service container");
+            this.haService.start();
+        }
+        LOG.debug("Starting JobManager container");
         this.jobManager.start();
+        LOG.debug("Starting TaskManager containers");
         this.taskManagers.parallelStream().forEach(GenericContainer::start);
-        waitForAllTaskManagerRegistered().waitUntilReady(jobManager);
+        LOG.debug("Creating REST cluster client");
+        this.restClusterClient = createClusterClient();
+        waitUntilAllTaskManagerConnected();
         isRunning = true;
     }
 
+    /** Stops all containers. */
     public void stop() {
         isRunning = false;
         if (restClusterClient != null) {
@@ -92,43 +113,51 @@ public class FlinkContainer implements BeforeAllCallback, AfterAllCallback {
         }
         this.taskManagers.forEach(GenericContainer::stop);
         this.jobManager.stop();
+        if (this.haService != null) {
+            this.haService.stop();
+        }
     }
 
+    /** Gets the running state of the cluster. */
     public boolean isRunning() {
         return isRunning;
     }
 
+    /** Gets JobManager container. */
     public GenericContainer<?> getJobManager() {
         return this.jobManager;
     }
 
+    /** Gets JobManager's hostname on the host machine. */
     public String getJobManagerHost() {
         return jobManager.getHost();
     }
 
+    /** Gets JobManager's port on the host machine. */
     public int getJobManagerPort() {
         return jobManager.getMappedPort(this.conf.get(RestOptions.PORT));
     }
 
+    /** Gets REST client connected to JobManager. */
     public RestClusterClient<StandaloneClusterId> getRestClusterClient() {
-        if (this.restClusterClient != null) {
-            return restClusterClient;
-        }
-        checkState(isRunning(), "Cluster client should only be retrieved for a running cluster");
-        try {
-            final Configuration clientConfiguration = new Configuration();
-            clientConfiguration.set(RestOptions.ADDRESS, jobManager.getHost());
-            clientConfiguration.set(
-                    RestOptions.PORT, jobManager.getMappedPort(conf.get(RestOptions.PORT)));
-            this.restClusterClient =
-                    new RestClusterClient<>(clientConfiguration, StandaloneClusterId.getInstance());
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Failed to create client for FlinkContainer cluster", e);
-        }
-        return restClusterClient;
+        return this.restClusterClient;
     }
 
+    /** Restarts JobManager container. */
+    public void restartJobManager(RunnableWithException afterFailAction) throws Exception {
+        if (this.haService == null) {
+            LOG.warn(
+                    "Restarting JobManager without HA service. This might drop all your running jobs");
+        }
+        jobManager.stop();
+        afterFailAction.run();
+        jobManager.start();
+        // Recreate client because JobManager REST port might have been changed in new container
+        this.restClusterClient = createClusterClient();
+        waitUntilAllTaskManagerConnected();
+    }
+
+    /** Restarts all TaskManager containers. */
     public void restartTaskManager(RunnableWithException afterFailAction) throws Exception {
         taskManagers.forEach(GenericContainer::stop);
         afterFailAction.run();
@@ -171,7 +200,7 @@ public class FlinkContainer implements BeforeAllCallback, AfterAllCallback {
 
     // ------------------------ JUnit 5 lifecycle management ------------------------
     @Override
-    public void beforeAll(ExtensionContext context) {
+    public void beforeAll(ExtensionContext context) throws Exception {
         this.start();
     }
 
@@ -182,20 +211,35 @@ public class FlinkContainer implements BeforeAllCallback, AfterAllCallback {
 
     // ----------------------------- Helper functions --------------------------------
 
-    private WaitStrategy waitForAllTaskManagerRegistered() {
-        return new HttpWaitStrategy()
-                .forPort(this.conf.get(RestOptions.PORT))
-                .forPath(TaskManagersHeaders.URL)
-                .forResponsePredicate(
-                        response -> {
-                            try {
-                                TaskManagersInfo managersInfo =
-                                        OBJECT_MAPPER.readValue(response, TaskManagersInfo.class);
-                                return this.taskManagers.size()
-                                        == managersInfo.getTaskManagerInfos().size();
-                            } catch (JsonProcessingException e) {
-                                return false;
-                            }
-                        });
+    private RestClusterClient<StandaloneClusterId> createClusterClient() throws Exception {
+        checkState(
+                jobManager.isRunning(), "JobManager should be running for creating a REST client");
+        final Configuration clientConfiguration = new Configuration();
+        clientConfiguration.set(RestOptions.ADDRESS, "localhost");
+        clientConfiguration.set(
+                RestOptions.PORT, jobManager.getMappedPort(conf.get(RestOptions.PORT)));
+        return new RestClusterClient<>(clientConfiguration, StandaloneClusterId.getInstance());
+    }
+
+    private void waitUntilAllTaskManagerConnected() throws InterruptedException, TimeoutException {
+        LOG.debug("Waiting for all TaskManagers connecting to JobManager");
+        CommonTestUtils.waitUtil(
+                () -> {
+                    final ClusterOverviewWithVersion clusterOverview;
+                    try {
+                        clusterOverview =
+                                this.restClusterClient
+                                        .sendRequest(
+                                                ClusterOverviewHeaders.getInstance(),
+                                                EmptyMessageParameters.getInstance(),
+                                                EmptyRequestBody.getInstance())
+                                        .get();
+                    } catch (Exception e) {
+                        throw new RuntimeException("Failed to get cluster overview", e);
+                    }
+                    return clusterOverview.getNumTaskManagersConnected() == taskManagers.size();
+                },
+                Duration.ofSeconds(30),
+                "TaskManagers are not ready within 30 seconds");
     }
 }
