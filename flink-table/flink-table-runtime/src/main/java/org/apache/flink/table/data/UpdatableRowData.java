@@ -17,13 +17,17 @@
 
 package org.apache.flink.table.data;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.table.data.binary.TypedSetters;
 import org.apache.flink.types.RowKind;
+
+import java.util.Arrays;
 
 /**
  * An implementation of {@link RowData} which is backed by a {@link RowData} and an updated Java
  * object array.
  */
+@Internal
 public final class UpdatableRowData implements RowData, TypedSetters {
 
     private RowData row;
@@ -34,6 +38,12 @@ public final class UpdatableRowData implements RowData, TypedSetters {
         this.row = row;
         this.fields = new Object[arity];
         this.updated = new boolean[arity];
+    }
+
+    /** Reset instance with a new row, all fields are unmarked as not updated. */
+    public void setRow(RowData row) {
+        this.row = row;
+        Arrays.fill(this.updated, false);
     }
 
     public RowData getRow() {

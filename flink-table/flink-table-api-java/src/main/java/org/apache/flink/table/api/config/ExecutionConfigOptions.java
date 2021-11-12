@@ -21,9 +21,11 @@ package org.apache.flink.table.api.config;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.docs.Documentation;
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.DescribedEnum;
 import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.description.Description;
+import org.apache.flink.configuration.description.InlineElement;
 
 import java.time.Duration;
 
@@ -120,6 +122,18 @@ public class ExecutionConfigOptions {
                                     + "Flink will check values and throw runtime exception when null values writing "
                                     + "into NOT NULL columns. Users can change the behavior to 'drop' to "
                                     + "silently drop such records without throwing exception.");
+
+    @Documentation.TableOption(execMode = Documentation.ExecMode.BATCH_STREAMING)
+    public static final ConfigOption<CharPrecisionEnforcer>
+            TABLE_EXEC_SINK_CHAR_PRECISION_ENFORCER =
+                    key("table.exec.sink.char-precision-enforcer")
+                            .enumType(CharPrecisionEnforcer.class)
+                            .defaultValue(CharPrecisionEnforcer.IGNORE)
+                            .withDescription(
+                                    "Determines whether string values for columns with CHAR(<precision>)/VARCHAR(<precision>) "
+                                            + "types will be trimmed, so that their length will match the one defined by the "
+                                            + "precision of their respective CHAR/VARCHAR column type. By default, no trimming "
+                                            + "is applied.");
 
     @Documentation.TableOption(execMode = Documentation.ExecMode.STREAMING)
     public static final ConfigOption<UpsertMaterialize> TABLE_EXEC_SINK_UPSERT_MATERIALIZE =
@@ -386,6 +400,30 @@ public class ExecutionConfigOptions {
         ERROR,
         /** Drop records when writing null values into NOT NULL column. */
         DROP
+    }
+
+    /**
+     * The enforcer to guarantee that precision of CHAR/VARCHAR columns is respected when writing
+     * data into sink.
+     */
+    public enum CharPrecisionEnforcer implements DescribedEnum {
+        IGNORE(
+                text(
+                        "Doesn't apply any trimming, simply ignores the CHAR/VARCHAR precision directive.")),
+        TRIM(
+                text(
+                        "Trims string values to match the length defined as the CHAR/VARCHAR precision."));
+
+        private final InlineElement description;
+
+        CharPrecisionEnforcer(InlineElement description) {
+            this.description = description;
+        }
+
+        @Override
+        public InlineElement getDescription() {
+            return description;
+        }
     }
 
     /** Upsert materialize strategy before sink. */

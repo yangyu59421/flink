@@ -25,7 +25,7 @@ import org.apache.flink.table.planner.factories.TestValuesTableFactory
 import org.apache.flink.table.planner.factories.TestValuesTableFactory.changelogRow
 import org.apache.flink.table.planner.runtime.utils.BatchTestBase.row
 import org.apache.flink.table.planner.runtime.utils.StreamingTestBase
-import org.apache.flink.table.planner.runtime.utils.TestData.{data1, nullData4, smallTupleData3, tupleData2, tupleData3, tupleData5}
+import org.apache.flink.table.planner.runtime.utils.TestData.{data1, data3, nullData4, smallTupleData3, tupleData2, tupleData3, tupleData5}
 import org.apache.flink.table.utils.LegacyRowResource
 import org.apache.flink.util.ExceptionUtils
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail}
@@ -633,6 +633,51 @@ class TableSinkITCase extends StreamingTestBase {
     val result = TestValuesTableFactory.getResults("not_null_sink")
     val expected = List("book,1,12", "book,4,11", "fruit,3,44")
     assertEquals(expected.sorted, result.sorted)
+  }
+
+  @Test
+  def testCharPrecisionEnforcer(): Unit = {
+    val dataId = TestValuesTableFactory.registerData(data3)
+    tEnv.executeSql(
+      s"""
+         |CREATE TABLE char_src (
+         |  id INT,
+         |  shopId BIGINT,
+         |  txt CHAR(9)
+         |) WITH (
+         |  'connector' = 'values',
+         |  'data-id' = '$dataId'
+         |)
+         |""".stripMargin)
+    tEnv.executeSql(
+      s"""
+         |CREATE TABLE char_sink (
+         |  id INT,
+         |  shopId BIGINT,
+         |  txt CHAR(9)
+         |) WITH (
+         |  'connector' = 'values',
+         |  'sink-insert-only' = 'true'
+         |)
+         |""".stripMargin)
+
+    // default should not trim any values
+    tEnv.executeSql("INSERT INTO char_sink SELECT * FROM char_src").await()
+    var result = TestValuesTableFactory.getResults("char_sink")
+    var expected = tupleData3
+      .map(t => t._1.toString + "," + t._2.toString + "," + t._3)
+      .sorted
+    assertEquals(expected, result.sorted)
+
+    // enable drop enforcer to make the query can run
+    tEnv.getConfig.getConfiguration.setString("table.exec.sink.char-precision-enforcer", "trim")
+    tEnv.executeSql("INSERT INTO char_sink SELECT * FROM char_src").await()
+    result = TestValuesTableFactory.getResults("char_sink")
+    expected = tupleData3
+      .map(t => t._1.toString + "," + t._2.toString + "," +
+        (if (t._3.length > 9) t._3.substring(0, 9) else t._3))
+      .sorted
+    assertEquals(expected, result.sorted)
   }
 
   @Test
