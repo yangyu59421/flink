@@ -587,7 +587,7 @@ public class ChangelogKeyedStateBackend<K>
 
             LOG.info("Starting materialization from {} : {}", lastMaterializedTo, upTo);
 
-            return Optional.of(
+            MaterializationRunnable materializationRunnable =
                     new MaterializationRunnable(
                             keyedStateBackend.snapshot(
                                     // This ID is not needed for materialization;
@@ -600,8 +600,12 @@ public class ChangelogKeyedStateBackend<K>
                                     System.currentTimeMillis(),
                                     streamFactory,
                                     CHECKPOINT_OPTIONS),
-                            // TODO: add metadata to log FLINK-23170.
-                            upTo));
+                            upTo);
+
+            // log metadata after materialization is triggered
+            keyValueStatesByName.values().forEach(t -> ((ChangelogState) t).resetWritingMetaFlag());
+
+            return Optional.of(materializationRunnable);
         } else {
             LOG.debug(
                     "Skip materialization, last materialized to {} : last log to {}",
