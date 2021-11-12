@@ -27,9 +27,12 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.local.LocalDataOutputStream;
 import org.apache.flink.core.fs.local.LocalFileStatus;
 import org.apache.flink.core.fs.local.LocalFileSystem;
+import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -44,19 +47,19 @@ public class TestFileSystem extends LocalFileSystem {
     private static final AtomicInteger streamOpenCounter = new AtomicInteger(0);
 
     // current number of created, unclosed (output) stream
-    private static final AtomicInteger currentUnclosedOutputStream = new AtomicInteger(0);
+    private static final Map<Path, Integer> currentUnclosedOutputStream = new ConcurrentHashMap<>();
 
     public static int getNumtimeStreamOpened() {
         return streamOpenCounter.get();
     }
 
-    public static int getCurrentUnclosedOutputStream() {
-        return currentUnclosedOutputStream.get();
+    public static Map<Path, Integer> getCurrentUnclosedOutputStream() {
+        return currentUnclosedOutputStream;
     }
 
     public static void resetStreamCounter() {
         streamOpenCounter.set(0);
-        currentUnclosedOutputStream.set(0);
+        currentUnclosedOutputStream.clear();
     }
 
     @Override
@@ -74,9 +77,9 @@ public class TestFileSystem extends LocalFileSystem {
     @Override
     public FSDataOutputStream create(final Path filePath, final WriteMode overwrite)
             throws IOException {
-        currentUnclosedOutputStream.incrementAndGet();
+        currentUnclosedOutputStream.compute(filePath, (k, v) -> v == null ? 1 : v + 1);
         LocalDataOutputStream stream = (LocalDataOutputStream) super.create(filePath, overwrite);
-        return new TestOutputStream(stream);
+        return new TestOutputStream(stream, filePath);
     }
 
     @Override
@@ -105,9 +108,11 @@ public class TestFileSystem extends LocalFileSystem {
     private static final class TestOutputStream extends FSDataOutputStream {
 
         private final LocalDataOutputStream stream;
+        private final Path path;
 
-        private TestOutputStream(LocalDataOutputStream stream) {
+        private TestOutputStream(LocalDataOutputStream stream, Path path) {
             this.stream = stream;
+            this.path = path;
         }
 
         @Override
@@ -137,7 +142,8 @@ public class TestFileSystem extends LocalFileSystem {
 
         @Override
         public void close() throws IOException {
-            currentUnclosedOutputStream.decrementAndGet();
+            currentUnclosedOutputStream.compute(
+                    path, (k, v) -> Preconditions.checkNotNull(v) == 1 ? null : v - 1);
             stream.close();
         }
     }

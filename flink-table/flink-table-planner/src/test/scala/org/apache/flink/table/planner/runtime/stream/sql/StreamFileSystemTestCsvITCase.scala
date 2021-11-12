@@ -21,7 +21,7 @@ package org.apache.flink.table.planner.runtime.stream.sql
 import org.apache.flink.testutils.TestFileSystem
 
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 import scala.collection.Seq
 
@@ -39,10 +39,10 @@ class StreamFileSystemTestCsvITCase extends StreamFileSystemITCaseBase {
   @After
   def close(): Unit = {
     try {
-      assertEquals(
-        "There are unclosed file output stream",
-        0,
-        TestFileSystem.getCurrentUnclosedOutputStream)
+      val unclosedOutputStream = TestFileSystem.getCurrentUnclosedOutputStream
+      assertTrue(
+        "There are unclosed file output stream which are " + unclosedOutputStream,
+        unclosedOutputStream.isEmpty)
     } finally {
       TestFileSystem.resetStreamCounter()
     }
