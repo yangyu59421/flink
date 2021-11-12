@@ -19,7 +19,6 @@
 package org.apache.flink.state.changelog;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.api.common.operators.MailboxExecutor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -145,8 +144,6 @@ public class ChangelogStateBackendTestUtils {
                         10,
                         1);
 
-        periodicMaterializationManager.start();
-
         try {
             ValueState<StateBackendTestBase.TestPojo> state =
                     keyedBackend.getPartitionedState(
@@ -158,7 +155,8 @@ public class ChangelogStateBackendTestUtils {
             keyedBackend.setCurrentKey(2);
             state.update(new StateBackendTestBase.TestPojo("u2", 2));
 
-            awaitMaterialization(keyedBackend, env.getMainMailboxExecutor());
+            // trigger materialization manually
+            periodicMaterializationManager.triggerMaterialization();
 
             keyedBackend.setCurrentKey(2);
             state.update(new StateBackendTestBase.TestPojo("u2", 22));
@@ -175,7 +173,6 @@ public class ChangelogStateBackendTestUtils {
                                     CheckpointOptions.forCheckpointWithDefaultLocation()),
                             sharedStateRegistry);
 
-            periodicMaterializationManager.close();
             IOUtils.closeQuietly(keyedBackend);
             keyedBackend.dispose();
 
@@ -208,16 +205,6 @@ public class ChangelogStateBackendTestUtils {
         } finally {
             IOUtils.closeQuietly(keyedBackend);
             keyedBackend.dispose();
-        }
-    }
-
-    private static void awaitMaterialization(
-            ChangelogKeyedStateBackend<Integer> keyedStateBackend, MailboxExecutor mailboxExecutor)
-            throws Exception {
-        while (mailboxExecutor
-                .submit(keyedStateBackend::hasNonMaterializedChanges, "for test")
-                .get()) {
-            Thread.sleep(10);
         }
     }
 
