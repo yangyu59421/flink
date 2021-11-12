@@ -142,10 +142,7 @@ public class AvroFileFormatFactory implements BulkReaderFormatFactory, BulkWrite
 
         @Override
         protected RowData convert(GenericRecord record) {
-            if (record == null) {
-                return null;
-            }
-            return (GenericRowData) converter.convert(record);
+            return record == null ? null : (GenericRowData) converter.convert(record);
         }
 
         @Override
