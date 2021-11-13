@@ -39,8 +39,7 @@ class StreamPhysicalWindowTableFunction(
     traitSet: RelTraitSet,
     inputRel: RelNode,
     outputRowType: RelDataType,
-    val windowing: TimeAttributeWindowingStrategy,
-    val emitPerRecord: Boolean)
+    val windowing: TimeAttributeWindowingStrategy)
   extends SingleRel(cluster, traitSet, inputRel)
   with StreamPhysicalRel {
   override def requireWatermark: Boolean = true
@@ -53,31 +52,18 @@ class StreamPhysicalWindowTableFunction(
       traitSet,
       inputs.get(0),
       outputRowType,
-      windowing,
-      emitPerRecord)
-  }
-
-  def copy(emitPerRecord: Boolean): StreamPhysicalWindowTableFunction = {
-    new StreamPhysicalWindowTableFunction(
-      cluster,
-      traitSet,
-      input,
-      outputRowType,
-      windowing,
-      emitPerRecord)
+      windowing)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     val inputFieldNames = getInput.getRowType.getFieldNames.asScala.toArray
     super.explainTerms(pw)
       .item("window", windowing.toSummaryString(inputFieldNames))
-      .itemIf("emitPerRecord", "true", emitPerRecord)
   }
 
   override def translateToExecNode(): ExecNode[_] = {
     new StreamExecWindowTableFunction(
       windowing,
-      emitPerRecord,
       InputProperty.DEFAULT,
       FlinkTypeFactory.toLogicalRowType(getRowType),
       getRelDetailedDescription

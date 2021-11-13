@@ -65,23 +65,17 @@ public class StreamExecWindowTableFunction extends ExecNodeBase<RowData>
         implements StreamExecNode<RowData>, SingleTransformationTranslator<RowData> {
 
     public static final String FIELD_NAME_WINDOWING = "windowing";
-    public static final String FIELD_NAME_EMIT_PER_RECORD = "emitPerRecord";
 
     @JsonProperty(FIELD_NAME_WINDOWING)
     private final TimeAttributeWindowingStrategy windowingStrategy;
 
-    @JsonProperty(FIELD_NAME_EMIT_PER_RECORD)
-    private final Boolean emitPerRecord;
-
     public StreamExecWindowTableFunction(
             TimeAttributeWindowingStrategy windowingStrategy,
-            Boolean emitPerRecord,
             InputProperty inputProperty,
             RowType outputType,
             String description) {
         this(
                 windowingStrategy,
-                emitPerRecord,
                 getNewNodeId(),
                 Collections.singletonList(inputProperty),
                 outputType,
@@ -91,7 +85,6 @@ public class StreamExecWindowTableFunction extends ExecNodeBase<RowData>
     @JsonCreator
     public StreamExecWindowTableFunction(
             @JsonProperty(FIELD_NAME_WINDOWING) TimeAttributeWindowingStrategy windowingStrategy,
-            @JsonProperty(FIELD_NAME_EMIT_PER_RECORD) Boolean emitPerRecord,
             @JsonProperty(FIELD_NAME_ID) int id,
             @JsonProperty(FIELD_NAME_INPUT_PROPERTIES) List<InputProperty> inputProperties,
             @JsonProperty(FIELD_NAME_OUTPUT_TYPE) RowType outputType,
@@ -99,33 +92,14 @@ public class StreamExecWindowTableFunction extends ExecNodeBase<RowData>
         super(id, inputProperties, outputType, description);
         checkArgument(inputProperties.size() == 1);
         this.windowingStrategy = checkNotNull(windowingStrategy);
-        this.emitPerRecord = checkNotNull(emitPerRecord);
     }
 
     @Override
     protected Transformation<RowData> translateToPlanInternal(PlannerBase planner) {
         final ExecEdge inputEdge = getInputEdges().get(0);
-        final RowType inputRowType = (RowType) inputEdge.getOutputType();
-        String[] inputFieldNames = inputRowType.getFieldNames().toArray(new String[0]);
-        String windowSummary = windowingStrategy.toSummaryString(inputFieldNames);
-
-        if (!emitPerRecord) {
-            throw new TableException(
-                    String.format(
-                            "Currently Flink doesn't support individual window table-valued function %s.\n "
-                                    + "Please use window table-valued function with the following computations:\n"
-                                    + "1. aggregate using window_start and window_end as group keys.\n"
-                                    + "2. topN using window_start and window_end as partition key.\n"
-                                    + "3. join with join condition contains window starts equality of input tables "
-                                    + "and window ends equality of input tables.\n",
-                            windowSummary));
-        } else if (!windowingStrategy.isRowtime()) {
-            throw new TableException("Processing time Window TableFunction is not supported yet.");
-        }
         final Transformation<RowData> inputTransform =
                 (Transformation<RowData>) inputEdge.translateToPlan(planner);
-        WindowSpec windowSpec = windowingStrategy.getWindow();
-        WindowAssigner<TimeWindow> windowAssigner = createWindowAssigner(windowSpec);
+        WindowAssigner<TimeWindow> windowAssigner = createWindowAssigner(windowingStrategy);
         final ZoneId shiftTimeZone =
                 TimeWindowUtil.getShiftTimeZone(
                         windowingStrategy.getTimeAttributeType(), planner.getTableConfig());
@@ -140,11 +114,17 @@ public class StreamExecWindowTableFunction extends ExecNodeBase<RowData>
                 inputTransform.getParallelism());
     }
 
-    private WindowAssigner<TimeWindow> createWindowAssigner(WindowSpec windowSpec) {
+    private WindowAssigner<TimeWindow> createWindowAssigner(
+            TimeAttributeWindowingStrategy windowingStrategy) {
+        WindowSpec windowSpec = windowingStrategy.getWindow();
+        boolean isProctime = windowingStrategy.isProctime();
         if (windowSpec instanceof TumblingWindowSpec) {
             TumblingWindowSpec tumblingWindowSpec = (TumblingWindowSpec) windowSpec;
             TumblingWindowAssigner windowAssigner =
                     TumblingWindowAssigner.of(tumblingWindowSpec.getSize());
+            if (isProctime) {
+                windowAssigner = windowAssigner.withProcessingTime();
+            }
             if (tumblingWindowSpec.getOffset() != null) {
                 windowAssigner = windowAssigner.withOffset(tumblingWindowSpec.getOffset());
             }
@@ -154,6 +134,9 @@ public class StreamExecWindowTableFunction extends ExecNodeBase<RowData>
             SlidingWindowAssigner windowAssigner =
                     SlidingWindowAssigner.of(
                             hoppingWindowSpec.getSize(), hoppingWindowSpec.getSlide());
+            if (isProctime) {
+                windowAssigner = windowAssigner.withProcessingTime();
+            }
             if (hoppingWindowSpec.getOffset() != null) {
                 windowAssigner = windowAssigner.withOffset(hoppingWindowSpec.getOffset());
             }
@@ -163,6 +146,9 @@ public class StreamExecWindowTableFunction extends ExecNodeBase<RowData>
             CumulativeWindowAssigner windowAssigner =
                     CumulativeWindowAssigner.of(
                             cumulativeWindowSpec.getMaxSize(), cumulativeWindowSpec.getStep());
+            if (isProctime) {
+                windowAssigner = windowAssigner.withProcessingTime();
+            }
             if (cumulativeWindowSpec.getOffset() != null) {
                 windowAssigner = windowAssigner.withOffset(cumulativeWindowSpec.getOffset());
             }
