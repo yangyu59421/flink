@@ -683,7 +683,7 @@ LogicalProject(a=[$0], b=[$1], uv=[$4])
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, uv])
-+- WindowAggregate(groupBy=[a, b, $e], window=[CUMULATE(time_col=[rowtime], max_size=[1 h], step=[25 min])], select=[a, b, $e, COUNT(DISTINCT c) AS uv, start('w$) AS window_start, end('w$) AS window_end])
++- WindowAggregate(groupBy=[a, b, $e], window=[CUMULATE(time_col=[rowtime], max_size=[1 h], step=[25 m])], select=[a, b, $e, COUNT(DISTINCT c) AS uv, start('w$) AS window_start, end('w$) AS window_end])
    +- Exchange(distribution=[hash[a, b, $e]])
       +- Expand(projects=[{a, null AS b, c, 4 AS $e, rowtime}, {null AS a, b, c, 8 AS $e, rowtime}])
          +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
@@ -718,9 +718,9 @@ LogicalProject(a=[$0], b=[$1], uv=[$4])
     <Resource name="optimized rel plan">
       <![CDATA[
 Calc(select=[a, b, uv])
-+- GlobalWindowAggregate(groupBy=[a, b, $e], window=[CUMULATE(slice_end=[$slice_end], max_size=[1 h], step=[25 min])], select=[a, b, $e, COUNT(distinct$0 count$0) AS uv, start('w$) AS window_start, end('w$) AS window_end])
++- GlobalWindowAggregate(groupBy=[a, b, $e], window=[CUMULATE(slice_end=[$slice_end], max_size=[1 h], step=[25 m])], select=[a, b, $e, COUNT(distinct$0 count$0) AS uv, start('w$) AS window_start, end('w$) AS window_end])
    +- Exchange(distribution=[hash[a, b, $e]])
-      +- LocalWindowAggregate(groupBy=[a, b, $e], window=[CUMULATE(time_col=[rowtime], max_size=[1 h], step=[25 min])], select=[a, b, $e, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0, slice_end('w$) AS $slice_end])
+      +- LocalWindowAggregate(groupBy=[a, b, $e], window=[CUMULATE(time_col=[rowtime], max_size=[1 h], step=[25 m])], select=[a, b, $e, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0, slice_end('w$) AS $slice_end])
          +- Expand(projects=[{a, null AS b, c, 4 AS $e, rowtime}, {null AS a, b, c, 8 AS $e, rowtime}])
             +- WatermarkAssigner(rowtime=[rowtime], watermark=[-(rowtime, 1000:INTERVAL SECOND)])
                +- TableSourceScan(table=[[default_catalog, default_database, MyTable, project=[a, b, c, rowtime], metadata=[]]], fields=[a, b, c, rowtime])
