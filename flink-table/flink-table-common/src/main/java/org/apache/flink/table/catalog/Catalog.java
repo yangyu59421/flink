@@ -520,6 +520,20 @@ public interface Catalog {
     void dropFunction(ObjectPath functionPath, boolean ignoreIfNotExists)
             throws FunctionNotExistException, CatalogException;
 
+    /**
+     * Rename an existing function.
+     *
+     * @param functionPath path of the function to be renamed
+     * @param newFunctionName the new name of the function
+     * @param ignoreIfNotExists flag to specify behavior if the function does not exist: if set to
+     *     false, throw an exception if set to true, nothing happens
+     * @throws FunctionNotExistException if the function does not exists
+     * @throws FunctionAlreadyExistException if the function with newFunctionName already exists
+     * @throws CatalogException in case of any runtime exception
+     */
+    void renameFunction(ObjectPath functionPath, String newFunctionName, boolean ignoreIfNotExists)
+            throws FunctionNotExistException, FunctionAlreadyExistException, CatalogException;
+
     // ------ statistics ------
 
     /**

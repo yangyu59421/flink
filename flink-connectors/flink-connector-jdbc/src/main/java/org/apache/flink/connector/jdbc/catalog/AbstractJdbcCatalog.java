@@ -324,6 +324,13 @@ public abstract class AbstractJdbcCatalog extends AbstractCatalog {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public void renameFunction(
+            ObjectPath functionPath, String newFunctionName, boolean ignoreIfNotExists)
+            throws FunctionNotExistException, FunctionAlreadyExistException, CatalogException {
+        throw new UnsupportedOperationException();
+    }
+
     // ------ stats ------
 
     @Override

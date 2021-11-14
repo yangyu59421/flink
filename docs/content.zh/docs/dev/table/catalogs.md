@@ -536,6 +536,9 @@ catalog.dropFunction(new ObjectPath("mydb", "myfunc"), false);
 // alter function
 catalog.alterFunction(new ObjectPath("mydb", "myfunc"), new CatalogFunctionImpl(...), false);
 
+// rename function
+catalog.renameFunction(new ObjectPath("mydb", "myfunc"), "my_new_func");
+
 // get function
 catalog.getFunction("myfunc");
 

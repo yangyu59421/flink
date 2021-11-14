@@ -298,6 +298,13 @@ public class TestCatalogFactory implements CatalogFactory {
         }
 
         @Override
+        public void renameFunction(
+                ObjectPath functionPath, String newFunctionName, boolean ignoreIfNotExists)
+                throws FunctionNotExistException, FunctionAlreadyExistException, CatalogException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public CatalogTableStatistics getTableStatistics(ObjectPath tablePath)
                 throws TableNotExistException, CatalogException {
             throw new UnsupportedOperationException();
