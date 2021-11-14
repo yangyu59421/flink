@@ -40,7 +40,6 @@ import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
 import org.apache.flink.runtime.client.JobExecutionException;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.concurrent.ComponentMainThreadExecutor;
-import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptorFactory;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
@@ -104,6 +103,7 @@ import org.apache.flink.runtime.util.ResourceCounter;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.concurrent.FutureUtils;
 import org.apache.flink.util.function.FunctionWithException;
 import org.apache.flink.util.function.ThrowingConsumer;
 
@@ -255,7 +255,7 @@ public class AdaptiveScheduler
         declarativeSlotPool.registerNewSlotsListener(this::newResourcesAvailable);
 
         this.componentMainThreadExecutor = mainThreadExecutor;
-        this.jobStatusListener = jobStatusListener;
+        this.jobStatusListener = Preconditions.checkNotNull(jobStatusListener);
 
         this.scaleUpController = new ReactiveScaleUpController(configuration);
 
@@ -420,10 +420,12 @@ public class AdaptiveScheduler
 
         backgroundTask.abort();
         // wait for the background task to finish and then close services
-        return FutureUtils.runAfterwardsAsync(
-                backgroundTask.getTerminationFuture(),
-                () -> stopCheckpointServicesSafely(jobTerminationFuture.get()),
-                getMainThreadExecutor());
+        return CompletableFuture.allOf(
+                FutureUtils.runAfterwardsAsync(
+                        backgroundTask.getTerminationFuture(),
+                        () -> stopCheckpointServicesSafely(jobTerminationFuture.get()),
+                        getMainThreadExecutor()),
+                checkpointsCleaner.closeAsync());
     }
 
     private void stopCheckpointServicesSafely(JobStatus terminalState) {
@@ -593,6 +595,19 @@ public class AdaptiveScheduler
                                 stateWithExecutionGraph.triggerSavepoint(
                                         targetDirectory, cancelJob),
                         "triggerSavepoint")
+                .orElse(
+                        FutureUtils.completedExceptionally(
+                                new CheckpointException(
+                                        "The Flink job is currently not executing.",
+                                        CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE)));
+    }
+
+    @Override
+    public CompletableFuture<String> triggerCheckpoint() {
+        return state.tryCall(
+                        StateWithExecutionGraph.class,
+                        StateWithExecutionGraph::triggerCheckpoint,
+                        "triggerCheckpoint")
                 .orElse(
                         FutureUtils.completedExceptionally(
                                 new CheckpointException(
@@ -959,9 +974,15 @@ public class AdaptiveScheduler
             ExecutionGraph executionGraph, ReservedSlots reservedSlots) {
         for (ExecutionVertex executionVertex : executionGraph.getAllExecutionVertices()) {
             final LogicalSlot assignedSlot = reservedSlots.getSlotFor(executionVertex.getID());
-            executionVertex
-                    .getCurrentExecutionAttempt()
-                    .registerProducedPartitions(assignedSlot.getTaskManagerLocation(), false);
+            final CompletableFuture<Void> registrationFuture =
+                    executionVertex
+                            .getCurrentExecutionAttempt()
+                            .registerProducedPartitions(
+                                    assignedSlot.getTaskManagerLocation(), false);
+            Preconditions.checkState(
+                    registrationFuture.isDone(),
+                    "Partition registration must be completed immediately for reactive mode");
+
             executionVertex.tryAssignResource(assignedSlot);
         }
 
@@ -1047,14 +1068,6 @@ public class AdaptiveScheduler
                 archivedExecutionGraph.getState(),
                 optionalFailure);
 
-        if (jobStatusListener != null) {
-            jobStatusListener.jobStatusChanges(
-                    jobInformation.getJobID(),
-                    archivedExecutionGraph.getState(),
-                    archivedExecutionGraph.getStatusTimestamp(archivedExecutionGraph.getState()),
-                    optionalFailure);
-        }
-
         jobTerminationFuture.complete(archivedExecutionGraph.getState());
     }
 
@@ -1135,9 +1148,21 @@ public class AdaptiveScheduler
                     state.getClass().getSimpleName(),
                     targetState.getStateClass().getSimpleName());
 
+            final JobStatus previousJobStatus = state.getJobStatus();
+
             state.onLeave(targetState.getStateClass());
             T targetStateInstance = targetState.getState();
             state = targetStateInstance;
+
+            final JobStatus newJobStatus = state.getJobStatus();
+
+            if (previousJobStatus != newJobStatus) {
+                jobStatusListener.jobStatusChanges(
+                        jobInformation.getJobID(),
+                        state.getJobStatus(),
+                        System.currentTimeMillis());
+            }
+
             return targetStateInstance;
         } finally {
             isTransitioningState = false;

@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -335,26 +336,32 @@ public final class CatalogManager {
      */
     public static class TableLookupResult {
 
-        private final boolean isTemporary;
+        private final @Nullable Catalog catalog;
         private final ResolvedCatalogBaseTable<?> resolvedTable;
 
         @VisibleForTesting
         public static TableLookupResult temporary(ResolvedCatalogBaseTable<?> resolvedTable) {
-            return new TableLookupResult(true, resolvedTable);
+            return new TableLookupResult(null, resolvedTable);
         }
 
         @VisibleForTesting
-        public static TableLookupResult permanent(ResolvedCatalogBaseTable<?> resolvedTable) {
-            return new TableLookupResult(false, resolvedTable);
+        public static TableLookupResult permanent(
+                Catalog catalog, ResolvedCatalogBaseTable<?> resolvedTable) {
+            return new TableLookupResult(Preconditions.checkNotNull(catalog), resolvedTable);
         }
 
-        private TableLookupResult(boolean isTemporary, ResolvedCatalogBaseTable<?> resolvedTable) {
-            this.isTemporary = isTemporary;
+        private TableLookupResult(
+                @Nullable Catalog catalog, ResolvedCatalogBaseTable<?> resolvedTable) {
+            this.catalog = catalog;
             this.resolvedTable = resolvedTable;
         }
 
         public boolean isTemporary() {
-            return isTemporary;
+            return catalog == null;
+        }
+
+        public Optional<Catalog> getCatalog() {
+            return Optional.ofNullable(catalog);
         }
 
         /** Returns a fully resolved catalog object. */
@@ -418,7 +425,7 @@ public final class CatalogManager {
             try {
                 final CatalogBaseTable table = currentCatalog.getTable(objectPath);
                 final ResolvedCatalogBaseTable<?> resolvedTable = resolveCatalogBaseTable(table);
-                return Optional.of(TableLookupResult.permanent(resolvedTable));
+                return Optional.of(TableLookupResult.permanent(currentCatalog, resolvedTable));
             } catch (TableNotExistException e) {
                 // Ignore.
             }
@@ -868,7 +875,27 @@ public final class CatalogManager {
         if (table instanceof ResolvedCatalogTable) {
             return (ResolvedCatalogTable) table;
         }
+
         final ResolvedSchema resolvedSchema = table.getUnresolvedSchema().resolve(schemaResolver);
+
+        final List<String> physicalColumns =
+                resolvedSchema.getColumns().stream()
+                        .filter(Column::isPhysical)
+                        .map(Column::getName)
+                        .collect(Collectors.toList());
+        table.getPartitionKeys()
+                .forEach(
+                        partitionKey -> {
+                            if (!physicalColumns.contains(partitionKey)) {
+                                throw new ValidationException(
+                                        String.format(
+                                                "Invalid partition key '%s'. A partition key must "
+                                                        + "reference a physical column in the schema. "
+                                                        + "Available columns are: %s",
+                                                partitionKey, physicalColumns));
+                            }
+                        });
+
         return new ResolvedCatalogTable(table, resolvedSchema);
     }
 

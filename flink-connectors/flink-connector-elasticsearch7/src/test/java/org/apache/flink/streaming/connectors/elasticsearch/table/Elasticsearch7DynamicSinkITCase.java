@@ -20,8 +20,8 @@ package org.apache.flink.streaming.connectors.elasticsearch.table;
 
 import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.connector.sink.Sink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -29,13 +29,16 @@ import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.UniqueConstraint;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
-import org.apache.flink.table.connector.sink.SinkFunctionProvider;
+import org.apache.flink.table.connector.sink.SinkProvider;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.types.RowKind;
+import org.apache.flink.util.DockerImageVersions;
+import org.apache.flink.util.TestLogger;
 
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.client.Client;
@@ -64,13 +67,11 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 /** IT tests for {@link Elasticsearch7DynamicSink}. */
-public class Elasticsearch7DynamicSinkITCase {
+public class Elasticsearch7DynamicSinkITCase extends TestLogger {
 
     @ClassRule
     public static ElasticsearchContainer elasticsearchContainer =
-            new ElasticsearchContainer(
-                    DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch-oss")
-                            .withTag("7.5.1"));
+            new ElasticsearchContainer(DockerImageName.parse(DockerImageVersions.ELASTICSEARCH_7));
 
     @SuppressWarnings("deprecation")
     protected final Client getClient() {
@@ -110,31 +111,28 @@ public class Elasticsearch7DynamicSinkITCase {
         String index = "writing-documents";
         Elasticsearch7DynamicSinkFactory sinkFactory = new Elasticsearch7DynamicSinkFactory();
 
-        SinkFunctionProvider sinkRuntimeProvider =
-                (SinkFunctionProvider)
-                        sinkFactory
-                                .createDynamicTableSink(
-                                        context()
-                                                .withSchema(schema)
-                                                .withOption(
-                                                        ElasticsearchOptions.INDEX_OPTION.key(),
-                                                        index)
-                                                .withOption(
-                                                        ElasticsearchOptions.HOSTS_OPTION.key(),
-                                                        elasticsearchContainer.getHttpHostAddress())
-                                                .withOption(
-                                                        ElasticsearchOptions
-                                                                .FLUSH_ON_CHECKPOINT_OPTION
-                                                                .key(),
-                                                        "false")
-                                                .build())
-                                .getSinkRuntimeProvider(new MockContext());
+        DynamicTableSink.SinkRuntimeProvider runtimeProvider =
+                sinkFactory
+                        .createDynamicTableSink(
+                                context()
+                                        .withSchema(schema)
+                                        .withOption(
+                                                Elasticsearch7ConnectorOptions.INDEX_OPTION.key(),
+                                                index)
+                                        .withOption(
+                                                Elasticsearch7ConnectorOptions.HOSTS_OPTION.key(),
+                                                elasticsearchContainer.getHttpHostAddress())
+                                        .build())
+                        .getSinkRuntimeProvider(new MockContext());
 
-        SinkFunction<RowData> sinkFunction = sinkRuntimeProvider.createSinkFunction();
+        final SinkProvider sinkProvider = (SinkProvider) runtimeProvider;
+        final Sink<RowData, ?, ?, ?> sink = sinkProvider.createSink();
         StreamExecutionEnvironment environment =
                 StreamExecutionEnvironment.getExecutionEnvironment();
+        environment.setParallelism(4);
+
         rowData.setRowKind(RowKind.UPDATE_AFTER);
-        environment.<RowData>fromElements(rowData).addSink(sinkFunction);
+        environment.<RowData>fromElements(rowData).sinkTo(sink);
         environment.execute();
 
         Client client = getClient();
@@ -154,11 +152,7 @@ public class Elasticsearch7DynamicSinkITCase {
     @Test
     public void testWritingDocumentsFromTableApi() throws Exception {
         TableEnvironment tableEnvironment =
-                TableEnvironment.create(
-                        EnvironmentSettings.newInstance()
-                                .useBlinkPlanner()
-                                .inStreamingMode()
-                                .build());
+                TableEnvironment.create(EnvironmentSettings.inStreamingMode());
 
         String index = "table-api";
         tableEnvironment.executeSql(
@@ -176,14 +170,12 @@ public class Elasticsearch7DynamicSinkITCase {
                         + "WITH (\n"
                         + String.format("'%s'='%s',\n", "connector", "elasticsearch-7")
                         + String.format(
-                                "'%s'='%s',\n", ElasticsearchOptions.INDEX_OPTION.key(), index)
-                        + String.format(
                                 "'%s'='%s',\n",
-                                ElasticsearchOptions.HOSTS_OPTION.key(),
-                                elasticsearchContainer.getHttpHostAddress())
+                                Elasticsearch7ConnectorOptions.INDEX_OPTION.key(), index)
                         + String.format(
                                 "'%s'='%s'\n",
-                                ElasticsearchOptions.FLUSH_ON_CHECKPOINT_OPTION.key(), "false")
+                                Elasticsearch7ConnectorOptions.HOSTS_OPTION.key(),
+                                elasticsearchContainer.getHttpHostAddress())
                         + ")");
 
         tableEnvironment
@@ -216,11 +208,7 @@ public class Elasticsearch7DynamicSinkITCase {
     @Test
     public void testWritingDocumentsNoPrimaryKey() throws Exception {
         TableEnvironment tableEnvironment =
-                TableEnvironment.create(
-                        EnvironmentSettings.newInstance()
-                                .useBlinkPlanner()
-                                .inStreamingMode()
-                                .build());
+                TableEnvironment.create(EnvironmentSettings.inStreamingMode());
 
         String index = "no-primary-key";
         tableEnvironment.executeSql(
@@ -236,14 +224,12 @@ public class Elasticsearch7DynamicSinkITCase {
                         + "WITH (\n"
                         + String.format("'%s'='%s',\n", "connector", "elasticsearch-7")
                         + String.format(
-                                "'%s'='%s',\n", ElasticsearchOptions.INDEX_OPTION.key(), index)
-                        + String.format(
                                 "'%s'='%s',\n",
-                                ElasticsearchOptions.HOSTS_OPTION.key(),
-                                elasticsearchContainer.getHttpHostAddress())
+                                Elasticsearch7ConnectorOptions.INDEX_OPTION.key(), index)
                         + String.format(
                                 "'%s'='%s'\n",
-                                ElasticsearchOptions.FLUSH_ON_CHECKPOINT_OPTION.key(), "false")
+                                Elasticsearch7ConnectorOptions.HOSTS_OPTION.key(),
+                                elasticsearchContainer.getHttpHostAddress())
                         + ")");
 
         tableEnvironment
@@ -312,11 +298,7 @@ public class Elasticsearch7DynamicSinkITCase {
     @Test
     public void testWritingDocumentsWithDynamicIndex() throws Exception {
         TableEnvironment tableEnvironment =
-                TableEnvironment.create(
-                        EnvironmentSettings.newInstance()
-                                .useBlinkPlanner()
-                                .inStreamingMode()
-                                .build());
+                TableEnvironment.create(EnvironmentSettings.inStreamingMode());
 
         String index = "dynamic-index-{b|yyyy-MM-dd}";
         tableEnvironment.executeSql(
@@ -328,14 +310,12 @@ public class Elasticsearch7DynamicSinkITCase {
                         + "WITH (\n"
                         + String.format("'%s'='%s',\n", "connector", "elasticsearch-7")
                         + String.format(
-                                "'%s'='%s',\n", ElasticsearchOptions.INDEX_OPTION.key(), index)
-                        + String.format(
                                 "'%s'='%s',\n",
-                                ElasticsearchOptions.HOSTS_OPTION.key(),
-                                elasticsearchContainer.getHttpHostAddress())
+                                Elasticsearch7ConnectorOptions.INDEX_OPTION.key(), index)
                         + String.format(
                                 "'%s'='%s'\n",
-                                ElasticsearchOptions.FLUSH_ON_CHECKPOINT_OPTION.key(), "false")
+                                Elasticsearch7ConnectorOptions.HOSTS_OPTION.key(),
+                                elasticsearchContainer.getHttpHostAddress())
                         + ")");
 
         tableEnvironment
@@ -360,6 +340,11 @@ public class Elasticsearch7DynamicSinkITCase {
 
         @Override
         public TypeInformation<?> createTypeInformation(DataType consumedDataType) {
+            return null;
+        }
+
+        @Override
+        public TypeInformation<?> createTypeInformation(LogicalType consumedLogicalType) {
             return null;
         }
 

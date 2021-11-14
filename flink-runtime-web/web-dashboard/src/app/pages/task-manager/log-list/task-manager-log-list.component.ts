@@ -16,7 +16,10 @@
 
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { first, flatMap } from 'rxjs/operators';
+
 import { TaskManagerService } from 'services';
+
+import { typeDefinition } from '../../../utils/strong-type';
 
 @Component({
   selector: 'flink-task-manager-log-list',
@@ -24,12 +27,15 @@ import { TaskManagerService } from 'services';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TaskManagerLogListComponent implements OnInit {
-  listOfLog: { name: string; size: number }[] = [];
+  listOfLog: Array<{ name: string; size: number }> = [];
   isLoading = true;
+
+  trackByName = (_: number, log: { name: string; size: number }): string => log.name;
+  readonly narrowLogData = typeDefinition<{ name: string; size: number }>();
 
   constructor(private taskManagerService: TaskManagerService, private cdr: ChangeDetectorRef) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.taskManagerService.taskManagerDetail$
       .pipe(
         first(),

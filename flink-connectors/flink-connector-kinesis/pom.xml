@@ -26,20 +26,21 @@ under the License.
 	<parent>
 		<groupId>org.apache.flink</groupId>
 		<artifactId>flink-connectors</artifactId>
-		<version>1.14-SNAPSHOT</version>
+		<version>1.15-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
 
-	<artifactId>flink-connector-kinesis_${scala.binary.version}</artifactId>
+	<artifactId>flink-connector-kinesis</artifactId>
 	<name>Flink : Connectors : Kinesis</name>
 	<properties>
-		<aws.sdk.version>1.11.754</aws.sdk.version>
-		<aws.sdkv2.version>2.13.52</aws.sdkv2.version>
-		<aws.kinesis-kcl.version>1.11.2</aws.kinesis-kcl.version>
-		<aws.kinesis-kpl.version>0.14.0</aws.kinesis-kpl.version>
-		<aws.dynamodbstreams-kinesis-adapter.version>1.5.0</aws.dynamodbstreams-kinesis-adapter.version>
-		<httpclient.version>4.5.9</httpclient.version>
-		<httpcore.version>4.4.11</httpcore.version>
+		<aws.sdk.version>1.12.7</aws.sdk.version>
+		<aws.sdkv2.version>2.16.86</aws.sdkv2.version>
+		<aws.kinesis-kcl.version>1.14.1</aws.kinesis-kcl.version>
+		<aws.kinesis-kpl.version>0.14.1</aws.kinesis-kpl.version>
+		<aws.dynamodbstreams-kinesis-adapter.version>1.5.3</aws.dynamodbstreams-kinesis-adapter.version>
+		<httpclient.version>4.5.13</httpclient.version>
+		<httpcore.version>4.4.14</httpcore.version>
+		<guava.version>29.0-jre</guava.version>
 	</properties>
 
 	<packaging>jar</packaging>
@@ -62,6 +63,26 @@ under the License.
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-sts</artifactId>
+			<version>${aws.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-kms</artifactId>
+			<version>${aws.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>${aws.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-dynamodb</artifactId>
+			<version>${aws.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-cloudwatch</artifactId>
 			<version>${aws.sdk.version}</version>
 		</dependency>
 		<dependency>
@@ -90,10 +111,6 @@ under the License.
 			<version>${aws.dynamodbstreams-kinesis-adapter.version}</version>
 			<exclusions>
 				<exclusion>
-					<groupId>com.amazonaws</groupId>
-					<artifactId>aws-java-sdk-cloudwatch</artifactId>
-				</exclusion>
-				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
 					<artifactId>jackson-databind</artifactId>
 				</exclusion>
@@ -118,7 +135,7 @@ under the License.
 		<!-- Flink ecosystem -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+			<artifactId>flink-streaming-java</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
@@ -127,7 +144,7 @@ under the License.
 		<!-- Projects depending on this project won't depend on flink-table-*. -->
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-table-api-java-bridge_${scala.binary.version}</artifactId>
+			<artifactId>flink-table-api-java-bridge</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 			<optional>true</optional>
@@ -143,7 +160,7 @@ under the License.
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+			<artifactId>flink-streaming-java</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 			<type>test-jar</type>
@@ -157,13 +174,19 @@ under the License.
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
+			<artifactId>flink-connector-testing</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-runtime_${scala.binary.version}</artifactId>
+			<artifactId>flink-test-utils</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-runtime</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
@@ -172,7 +195,6 @@ under the License.
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers</artifactId>
-			<version>1.15.3</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -186,7 +208,7 @@ under the License.
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>
+			<artifactId>flink-table-planner_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
@@ -228,18 +250,6 @@ under the License.
 		</dependency>
 
 	</dependencies>
-
-	<dependencyManagement>
-		<dependencies>
-
-			<dependency>
-				<groupId>org.apache.httpcomponents</groupId>
-				<artifactId>httpclient</artifactId>
-				<version>4.5.9</version>
-			</dependency>
-
-		</dependencies>
-	</dependencyManagement>
 
 	<build>
 		<plugins>

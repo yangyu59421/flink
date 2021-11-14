@@ -19,23 +19,29 @@
 package org.apache.flink.orc.vector;
 
 import org.apache.flink.orc.TimestampUtil;
+import org.apache.flink.table.types.logical.ArrayType;
 import org.apache.flink.table.types.logical.DecimalType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
+import org.apache.flink.table.types.logical.MapType;
+import org.apache.flink.table.types.logical.RowType;
 
 import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.DecimalColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.DoubleColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.ListColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.MapColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.StructColumnVector;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.time.LocalDate;
 
-import static org.apache.flink.table.runtime.functions.SqlDateTimeUtils.dateToInternal;
+import static org.apache.flink.table.utils.DateTimeUtils.dateToInternal;
 
 /** This column vector is used to adapt hive's ColumnVector to Flink's ColumnVector. */
 public abstract class AbstractOrcColumnVector
@@ -68,9 +74,15 @@ public abstract class AbstractOrcColumnVector
             return new OrcDecimalColumnVector((DecimalColumnVector) vector);
         } else if (TimestampUtil.isHiveTimestampColumnVector(vector)) {
             return new OrcTimestampColumnVector(vector);
+        } else if (vector instanceof ListColumnVector) {
+            return new OrcArrayColumnVector((ListColumnVector) vector, (ArrayType) logicalType);
+        } else if (vector instanceof StructColumnVector) {
+            return new OrcRowColumnVector((StructColumnVector) vector, (RowType) logicalType);
+        } else if (vector instanceof MapColumnVector) {
+            return new OrcMapColumnVector((MapColumnVector) vector, (MapType) logicalType);
         } else {
             throw new UnsupportedOperationException(
-                    "Unsupport vector: " + vector.getClass().getName());
+                    "Unsupported vector: " + vector.getClass().getName());
         }
     }
 

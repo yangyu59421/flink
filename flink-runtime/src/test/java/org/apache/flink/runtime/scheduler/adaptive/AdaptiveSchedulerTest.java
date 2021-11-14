@@ -57,7 +57,7 @@ import org.apache.flink.runtime.jobmaster.slotpool.DefaultAllocatedSlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.DefaultDeclarativeSlotPool;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.MetricRegistry;
-import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
+import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.metrics.util.TestingMetricRegistry;
 import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
 import org.apache.flink.runtime.operators.coordination.TaskNotRunningException;
@@ -89,6 +89,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -98,7 +99,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static org.apache.flink.core.testutils.FlinkMatchers.futureFailedWith;
@@ -106,8 +107,8 @@ import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.cr
 import static org.apache.flink.runtime.jobgraph.JobGraphTestUtils.streamingJobGraph;
 import static org.apache.flink.runtime.jobmaster.slotpool.DefaultDeclarativeSlotPoolTest.createSlotOffersForResourceRequirements;
 import static org.apache.flink.runtime.jobmaster.slotpool.SlotPoolTestUtils.offerSlots;
-import static org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups.createUnregisteredJobManagerMetricGroup;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertFalse;
@@ -401,7 +402,7 @@ public class AdaptiveSchedulerTest extends TestLogger {
         // With this approach we don't have to make assumption as to how many
         // tasks are being scheduled.
         final boolean b =
-                mainThreadExecutor.getNonPeriodicScheduledTask().stream()
+                mainThreadExecutor.getActiveNonPeriodicScheduledTask().stream()
                         .anyMatch(
                                 scheduledTask ->
                                         scheduledTask.getDelay(TimeUnit.MINUTES)
@@ -440,11 +441,9 @@ public class AdaptiveSchedulerTest extends TestLogger {
                 new AdaptiveSchedulerBuilder(jobGraph, singleThreadMainThreadExecutor)
                         .setJobMasterConfiguration(configuration)
                         .setJobManagerJobMetricGroup(
-                                new JobManagerJobMetricGroup(
-                                        metricRegistry,
-                                        createUnregisteredJobManagerMetricGroup(),
-                                        new JobID(),
-                                        "jobName"))
+                                JobManagerMetricGroup.createJobManagerMetricGroup(
+                                                metricRegistry, "localhost")
+                                        .addJob(new JobID(), "jobName"))
                         .setDeclarativeSlotPool(declarativeSlotPool)
                         .build();
 
@@ -610,21 +609,79 @@ public class AdaptiveSchedulerTest extends TestLogger {
     }
 
     @Test
-    public void testGoToFinishedNotifiesJobListener() throws Exception {
-        final AtomicReference<JobStatus> jobStatusUpdate = new AtomicReference<>();
+    public void testJobStatusListenerOnlyCalledIfJobStatusChanges() throws Exception {
+        final AtomicInteger numStatusUpdates = new AtomicInteger();
         final AdaptiveScheduler scheduler =
                 new AdaptiveSchedulerBuilder(createJobGraph(), mainThreadExecutor)
                         .setJobStatusListener(
-                                (jobId, newJobStatus, timestamp, error) ->
-                                        jobStatusUpdate.set(newJobStatus))
+                                (jobId, newJobStatus, timestamp) ->
+                                        numStatusUpdates.incrementAndGet())
                         .build();
 
-        final ArchivedExecutionGraph archivedExecutionGraph =
-                new ArchivedExecutionGraphBuilder().setState(JobStatus.FAILED).build();
+        // sanity check
+        assertThat(
+                "Assumption about job status for Scheduler@Created is incorrect.",
+                scheduler.requestJobStatus(),
+                is(JobStatus.INITIALIZING));
 
-        scheduler.goToFinished(archivedExecutionGraph);
+        // transition into next state, for which the job state is still INITIALIZING
+        scheduler.goToWaitingForResources();
 
-        assertThat(jobStatusUpdate.get(), is(archivedExecutionGraph.getState()));
+        // sanity check
+        assertThat(
+                "Assumption about job status for Scheduler@WaitingForResources is incorrect.",
+                scheduler.requestJobStatus(),
+                is(JobStatus.INITIALIZING));
+
+        assertThat(numStatusUpdates.get(), is(0));
+    }
+
+    @Test
+    public void testJobStatusListenerNotifiedOfJobStatusChanges() throws Exception {
+        final JobGraph jobGraph = createJobGraph();
+        final DefaultDeclarativeSlotPool declarativeSlotPool =
+                createDeclarativeSlotPool(jobGraph.getJobID());
+
+        final Configuration configuration = new Configuration();
+        configuration.set(JobManagerOptions.RESOURCE_WAIT_TIMEOUT, Duration.ofMillis(1L));
+
+        final Collection<JobStatus> jobStatusNotifications = new ArrayList<>();
+        final AdaptiveScheduler scheduler =
+                new AdaptiveSchedulerBuilder(jobGraph, singleThreadMainThreadExecutor)
+                        .setJobMasterConfiguration(configuration)
+                        .setJobStatusListener(
+                                (jobId, newJobStatus, timestamp) ->
+                                        jobStatusNotifications.add(newJobStatus))
+                        .setDeclarativeSlotPool(declarativeSlotPool)
+                        .build();
+
+        final SubmissionBufferingTaskManagerGateway taskManagerGateway =
+                new SubmissionBufferingTaskManagerGateway(1 + PARALLELISM);
+
+        singleThreadMainThreadExecutor.execute(
+                () -> {
+                    scheduler.startScheduling();
+
+                    offerSlots(
+                            declarativeSlotPool,
+                            createSlotOffersForResourceRequirements(
+                                    ResourceCounter.withResource(ResourceProfile.UNKNOWN, 1)),
+                            taskManagerGateway);
+                });
+
+        // wait for the task submission
+        final TaskDeploymentDescriptor submittedTask = taskManagerGateway.submittedTasks.take();
+
+        // let the job finish
+        singleThreadMainThreadExecutor.execute(
+                () ->
+                        scheduler.updateTaskExecutionState(
+                                new TaskExecutionState(
+                                        submittedTask.getExecutionAttemptId(),
+                                        ExecutionState.FINISHED)));
+        scheduler.getJobTerminationFuture().get();
+
+        assertThat(jobStatusNotifications, hasItems(JobStatus.RUNNING, JobStatus.FINISHED));
     }
 
     @Test

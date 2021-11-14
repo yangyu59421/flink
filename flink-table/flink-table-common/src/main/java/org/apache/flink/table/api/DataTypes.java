@@ -62,6 +62,7 @@ import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.table.types.logical.YearMonthIntervalType;
 import org.apache.flink.table.types.logical.YearMonthIntervalType.YearMonthResolution;
 import org.apache.flink.table.types.logical.ZonedTimestampType;
+import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.table.types.utils.TypeInfoDataTypeConverter;
 import org.apache.flink.util.Preconditions;
 
@@ -95,6 +96,16 @@ import static org.apache.flink.table.types.extraction.ExtractionUtils.validateSt
  */
 @PublicEvolving
 public final class DataTypes {
+
+    /**
+     * Creates a {@link DataType} from a {@link LogicalType} with default conversion class.
+     *
+     * @return the {@link LogicalType} converted to a {@link DataType}.
+     * @see LogicalType#getDefaultConversion()
+     */
+    public static DataType of(LogicalType logicalType) {
+        return TypeConversions.fromLogicalToDataType(logicalType);
+    }
 
     /**
      * Creates an unresolved type that will be resolved to a {@link DataType} by analyzing the given
@@ -731,6 +742,11 @@ public final class DataTypes {
         final List<DataType> fieldDataTypes =
                 Stream.of(fields).map(f -> f.dataType).collect(Collectors.toList());
         return new FieldsDataType(new RowType(logicalFields), fieldDataTypes);
+    }
+
+    /** @see #ROW(Field...) */
+    public static DataType ROW(List<Field> fields) {
+        return ROW(fields.toArray(new Field[0]));
     }
 
     /**
