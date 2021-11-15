@@ -416,13 +416,13 @@ public class AdaptiveSchedulerTest extends TestLogger {
 
     @Test
     public void testNumRestartsMetric() throws Exception {
-        final CompletableFuture<Gauge<Integer>> numRestartsMetricFuture = new CompletableFuture<>();
+        final CompletableFuture<Gauge<Long>> numRestartsMetricFuture = new CompletableFuture<>();
         final MetricRegistry metricRegistry =
                 TestingMetricRegistry.builder()
                         .setRegisterConsumer(
                                 (metric, name, group) -> {
                                     if (MetricNames.NUM_RESTARTS.equals(name)) {
-                                        numRestartsMetricFuture.complete((Gauge<Integer>) metric);
+                                        numRestartsMetricFuture.complete((Gauge<Long>) metric);
                                     }
                                 })
                         .build();
@@ -451,7 +451,7 @@ public class AdaptiveSchedulerTest extends TestLogger {
                         .setDeclarativeSlotPool(declarativeSlotPool)
                         .build();
 
-        final Gauge<Integer> numRestartsMetric = numRestartsMetricFuture.get();
+        final Gauge<Long> numRestartsMetric = numRestartsMetricFuture.get();
 
         final SubmissionBufferingTaskManagerGateway taskManagerGateway =
                 new SubmissionBufferingTaskManagerGateway(1 + PARALLELISM);
@@ -473,7 +473,7 @@ public class AdaptiveSchedulerTest extends TestLogger {
         // wait for the first task submission
         taskManagerGateway.waitForSubmissions(1, Duration.ofSeconds(5));
 
-        assertThat(numRestartsMetric.getValue(), is(0));
+        assertThat(numRestartsMetric.getValue(), is(0L));
 
         singleThreadMainThreadExecutor.execute(
                 () -> {
@@ -489,7 +489,7 @@ public class AdaptiveSchedulerTest extends TestLogger {
         // wait for the second task submissions
         taskManagerGateway.waitForSubmissions(PARALLELISM, Duration.ofSeconds(5));
 
-        assertThat(numRestartsMetric.getValue(), is(1));
+        assertThat(numRestartsMetric.getValue(), is(1L));
     }
 
     @Test
@@ -1226,7 +1226,7 @@ public class AdaptiveSchedulerTest extends TestLogger {
 
         @Override
         public JobStatus getJobStatus() {
-            return null;
+            return JobStatus.RUNNING;
         }
 
         @Override
