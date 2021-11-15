@@ -18,6 +18,7 @@
 
 package org.apache.flink.cep.utils;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.AggregatingState;
 import org.apache.flink.api.common.state.AggregatingStateDescriptor;
 import org.apache.flink.api.common.state.KeyedStateStore;
@@ -30,13 +31,17 @@ import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.cep.configuration.CEPCacheOptions;
 import org.apache.flink.cep.nfa.sharedbuffer.SharedBuffer;
+import org.apache.flink.configuration.Configuration;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Extends {@link SharedBuffer} with methods for checking the number of state accesses. It does not
@@ -44,10 +49,35 @@ import java.util.Map;
  */
 public class TestSharedBuffer<V> extends SharedBuffer<V> {
 
+    public static final Configuration MINI_CACHE_CONFIG = new Configuration();
+    public static final Configuration BIG_CACHE_CONFIG = new Configuration();
+
+    static {
+        MINI_CACHE_CONFIG.set(CEPCacheOptions.CEP_SHARED_BUFFER_ENTRY_CACHE_SLOTS, 1);
+        MINI_CACHE_CONFIG.set(CEPCacheOptions.CEP_SHARED_BUFFER_EVENT_CACHE_SLOTS, 1);
+        MINI_CACHE_CONFIG.set(
+                CEPCacheOptions.CEP_CACHE_STATISTICS_INTERVAL,
+                Duration.ofMillis(TimeUnit.SECONDS.toMillis(1)));
+
+        BIG_CACHE_CONFIG.set(CEPCacheOptions.CEP_SHARED_BUFFER_ENTRY_CACHE_SLOTS, 10240);
+        BIG_CACHE_CONFIG.set(CEPCacheOptions.CEP_SHARED_BUFFER_EVENT_CACHE_SLOTS, 10240);
+        BIG_CACHE_CONFIG.set(
+                CEPCacheOptions.CEP_CACHE_STATISTICS_INTERVAL,
+                Duration.ofMillis(TimeUnit.SECONDS.toMillis(1)));
+    }
+
     private final MockKeyedStateStore keyedStateStore;
 
     private TestSharedBuffer(MockKeyedStateStore stateStore, TypeSerializer<V> valueSerializer) {
         super(stateStore, valueSerializer);
+        this.keyedStateStore = stateStore;
+    }
+
+    private TestSharedBuffer(
+            MockKeyedStateStore stateStore,
+            TypeSerializer<V> valueSerializer,
+            ExecutionConfig.GlobalJobParameters jobParameters) {
+        super(stateStore, valueSerializer, jobParameters);
         this.keyedStateStore = stateStore;
     }
 
@@ -72,6 +102,11 @@ public class TestSharedBuffer<V> extends SharedBuffer<V> {
      */
     public static <T> TestSharedBuffer<T> createTestBuffer(TypeSerializer<T> typeSerializer) {
         return new TestSharedBuffer<>(new MockKeyedStateStore(), typeSerializer);
+    }
+
+    public static <T> TestSharedBuffer<T> createTestBuffer(
+            TypeSerializer<T> typeSerializer, ExecutionConfig.GlobalJobParameters jobParameters) {
+        return new TestSharedBuffer<>(new MockKeyedStateStore(), typeSerializer, jobParameters);
     }
 
     private static class MockKeyedStateStore implements KeyedStateStore {

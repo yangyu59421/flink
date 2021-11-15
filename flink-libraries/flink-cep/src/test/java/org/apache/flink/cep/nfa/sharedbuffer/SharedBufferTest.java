@@ -18,31 +18,47 @@
 
 package org.apache.flink.cep.nfa.sharedbuffer;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.cep.Event;
 import org.apache.flink.cep.nfa.DeweyNumber;
 import org.apache.flink.cep.utils.TestSharedBuffer;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.cep.utils.TestSharedBuffer.BIG_CACHE_CONFIG;
+import static org.apache.flink.cep.utils.TestSharedBuffer.MINI_CACHE_CONFIG;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /** Tests for {@link SharedBuffer}. */
+@RunWith(Parameterized.class)
 public class SharedBufferTest extends TestLogger {
+
+    @Parameterized.Parameter public ExecutionConfig.GlobalJobParameters jobParameters;
+
+    @Parameterized.Parameters
+    public static Collection<Configuration> prepareSharedBufferCacheConfig() {
+        return Arrays.asList(BIG_CACHE_CONFIG, MINI_CACHE_CONFIG);
+    }
 
     @Test
     public void testSharedBuffer() throws Exception {
         SharedBuffer<Event> sharedBuffer =
-                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer());
+                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer(), jobParameters);
         int numberEvents = 8;
         Event[] events = new Event[numberEvents];
         EventId[] eventIds = new EventId[numberEvents];
@@ -161,7 +177,7 @@ public class SharedBufferTest extends TestLogger {
     @Test
     public void testClearingSharedBufferWithMultipleEdgesBetweenEntries() throws Exception {
         SharedBuffer<Event> sharedBuffer =
-                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer());
+                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer(), jobParameters);
         int numberEvents = 8;
         Event[] events = new Event[numberEvents];
         EventId[] eventIds = new EventId[numberEvents];
@@ -208,7 +224,7 @@ public class SharedBufferTest extends TestLogger {
     @Test
     public void testSharedBufferExtractOrder() throws Exception {
         SharedBuffer<Event> sharedBuffer =
-                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer());
+                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer(), jobParameters);
         int numberEvents = 5;
         Event[] events = new Event[numberEvents];
         EventId[] eventIds = new EventId[numberEvents];
@@ -268,7 +284,7 @@ public class SharedBufferTest extends TestLogger {
     @Test
     public void testSharedBufferCountersClearing() throws Exception {
         SharedBuffer<Event> sharedBuffer =
-                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer());
+                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer(), jobParameters);
         int numberEvents = 4;
         Event[] events = new Event[numberEvents];
 
@@ -289,7 +305,7 @@ public class SharedBufferTest extends TestLogger {
     @Test
     public void testSharedBufferAccessor() throws Exception {
         TestSharedBuffer<Event> sharedBuffer =
-                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer());
+                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer(), BIG_CACHE_CONFIG);
         int numberEvents = 8;
         Event[] events = new Event[numberEvents];
         EventId[] eventIds = new EventId[numberEvents];
@@ -342,7 +358,7 @@ public class SharedBufferTest extends TestLogger {
     @Test
     public void testReleaseNodesWithLongPath() throws Exception {
         SharedBuffer<Event> sharedBuffer =
-                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer());
+                TestSharedBuffer.createTestBuffer(Event.createTypeSerializer(), jobParameters);
 
         final int numberEvents = 100000;
         Event[] events = new Event[numberEvents];

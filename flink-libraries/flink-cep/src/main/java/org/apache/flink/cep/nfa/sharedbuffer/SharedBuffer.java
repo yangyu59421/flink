@@ -134,6 +134,7 @@ public class SharedBuffer<V> {
                 cepConf.getInteger(CEPCacheOptions.CEP_SHARED_BUFFER_ENTRY_CACHE_SLOTS);
         Duration cacheStatisticsInterval =
                 cepConf.get(CEPCacheOptions.CEP_CACHE_STATISTICS_INTERVAL);
+        // set the events buffer cache and strategy of exchanging out
         this.eventsBufferCache =
                 CacheBuilder.newBuilder()
                         .maximumSize(eventsBufferCacheSlots)
@@ -154,6 +155,7 @@ public class SharedBuffer<V> {
                                             }
                                         })
                         .build();
+        // set the entry cache and strategy of exchanging out
         this.entryCache =
                 CacheBuilder.newBuilder()
                         .maximumSize(entryCacheSlots)

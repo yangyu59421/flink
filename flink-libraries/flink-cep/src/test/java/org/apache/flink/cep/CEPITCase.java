@@ -18,6 +18,7 @@
 
 package org.apache.flink.cep;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -43,18 +44,31 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.cep.utils.TestSharedBuffer.BIG_CACHE_CONFIG;
+import static org.apache.flink.cep.utils.TestSharedBuffer.MINI_CACHE_CONFIG;
 import static org.junit.Assert.assertEquals;
 
 /** End to end tests of both CEP operators and {@link NFA}. */
 @SuppressWarnings("serial")
+@RunWith(Parameterized.class)
 public class CEPITCase extends AbstractTestBase {
+
+    @Parameterized.Parameter public ExecutionConfig.GlobalJobParameters jobParameters;
+
+    @Parameterized.Parameters
+    public static Collection<Configuration> prepareSharedBufferCacheConfig() {
+        return Arrays.asList(BIG_CACHE_CONFIG, MINI_CACHE_CONFIG);
+    }
 
     /**
      * Checks that a certain event sequence is recognized.
@@ -64,6 +78,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testSimplePatternCEP() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Event> input =
                 env.fromElements(
@@ -135,6 +150,7 @@ public class CEPITCase extends AbstractTestBase {
     public void testSimpleKeyedPatternCEP() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(2);
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Event> input =
                 env.fromElements(
@@ -220,6 +236,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testSimplePatternEventTime() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         // (Event, timestamp)
         DataStream<Event> input =
@@ -317,6 +334,7 @@ public class CEPITCase extends AbstractTestBase {
     public void testSimpleKeyedPatternEventTime() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(2);
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         // (Event, timestamp)
         DataStream<Event> input =
@@ -425,6 +443,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testSimplePatternWithSingleState() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Tuple2<Integer, Integer>> input =
                 env.fromElements(new Tuple2<>(0, 1), new Tuple2<>(0, 2));
@@ -466,6 +485,7 @@ public class CEPITCase extends AbstractTestBase {
     public void testProcessingTimeWithWindow() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Integer> input = env.fromElements(1, 2);
 
@@ -496,6 +516,7 @@ public class CEPITCase extends AbstractTestBase {
     public void testTimeoutHandling() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         // (Event, timestamp)
         DataStream<Event> input =
@@ -610,6 +631,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testSimpleOrFilterPatternCEP() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Event> input =
                 env.fromElements(
@@ -695,6 +717,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testSimplePatternEventTimeWithComparator() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         // (Event, timestamp)
         DataStream<Event> input =
@@ -805,6 +828,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testSimpleAfterMatchSkip() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Tuple2<Integer, String>> input =
                 env.fromElements(
@@ -856,6 +880,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testRichPatternFlatSelectFunction() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStream<Event> input =
                 env.fromElements(
@@ -951,6 +976,7 @@ public class CEPITCase extends AbstractTestBase {
     @Test
     public void testRichPatternSelectFunction() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
         env.setParallelism(2);
 
         DataStream<Event> input =
@@ -1059,7 +1085,9 @@ public class CEPITCase extends AbstractTestBase {
 
     @Test
     public void testFlatSelectSerializationWithAnonymousClass() throws Exception {
+
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(jobParameters);
 
         DataStreamSource<Integer> elements = env.fromElements(1, 2, 3);
         OutputTag<Integer> outputTag = new OutputTag<Integer>("AAA") {};
