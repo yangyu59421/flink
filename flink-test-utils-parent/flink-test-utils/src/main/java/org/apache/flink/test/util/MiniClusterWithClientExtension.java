@@ -27,12 +27,16 @@ import org.apache.flink.streaming.util.TestStreamEnvironment;
 import org.apache.flink.util.ExceptionUtils;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Starts a Flink mini cluster as a resource and registers the respective ExecutionEnvironment and
  * StreamExecutionEnvironment.
  */
 public class MiniClusterWithClientExtension extends MiniClusterExtension {
+    private static final Logger LOG = LoggerFactory.getLogger(MiniClusterWithClientExtension.class);
+
     private ClusterClient<?> clusterClient;
     private RestClusterClient<MiniClusterClient.MiniClusterId> restClusterClient;
 
@@ -74,7 +78,7 @@ public class MiniClusterWithClientExtension extends MiniClusterExtension {
 
     @Override
     public void after(ExtensionContext context) throws Exception {
-        log.info("Finalization triggered: Cluster shutdown is going to be initiated.");
+        LOG.info("Finalization triggered: Cluster shutdown is going to be initiated.");
         TestStreamEnvironment.unsetAsContext();
         TestEnvironment.unsetAsContext();
 
@@ -103,7 +107,7 @@ public class MiniClusterWithClientExtension extends MiniClusterExtension {
         super.after(context);
 
         if (exception != null) {
-            log.warn("Could not properly shut down the MiniClusterWithClientResource.", exception);
+            LOG.warn("Could not properly shut down the MiniClusterWithClientResource.", exception);
         }
     }
 
