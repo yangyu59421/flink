@@ -48,7 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-/** Example to illustrates how to use {@link AsyncFunction}. */
+/** Example to illustrate how to use {@link AsyncFunction}. */
 public class AsyncIOExample {
 
     private static final Logger LOG = LoggerFactory.getLogger(AsyncIOExample.class);
