@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.util.AbstractAutoCloseableRegistry;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -35,14 +36,13 @@ import java.util.Map;
  * registry is closed.
  *
  * <p>Registering to an already closed registry will throw an exception and close the provided
- * {@link AutoCloseable}
+ * {@link AutoCloseable}.
  *
- * <p>All methods in this class are thread-safe.
- *
- * <p>Unlike {@link CloseableRegistry} this class can throw the exception during close.
+ * <p>Unlike {@link CloseableRegistry} this class can throw an exception during the close.
  *
  * <p>This class closes all registered {@link Closeable}s in the reverse registration order.
  */
+@ThreadSafe
 @Internal
 public class AutoCloseableRegistry
         extends AbstractAutoCloseableRegistry<AutoCloseable, AutoCloseable, Object> {
