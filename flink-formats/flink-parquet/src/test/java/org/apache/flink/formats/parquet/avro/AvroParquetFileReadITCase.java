@@ -32,7 +32,6 @@ import org.apache.flink.util.CloseableIterator;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,6 +42,8 @@ import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /** ITCase for {@link AvroParquetRecordFormat}. */
 public class AvroParquetFileReadITCase extends AbstractTestBase {
@@ -116,10 +117,10 @@ public class AvroParquetFileReadITCase extends AbstractTestBase {
         try (CloseableIterator<GenericRecord> iterator =
                 stream.executeAndCollect("Reading Avro GenericRecords")) {
             List<GenericRecord> list = collectRecords(iterator, 6);
-            Assert.assertEquals(list.size(), 6);
+            assertEquals(list.size(), 6);
 
             for (int i = 0; i < 6; i++) {
-                Assert.assertTrue(list.contains(userRecords.get(i)));
+                assertTrue(list.contains(userRecords.get(i)));
             }
         }
     }
