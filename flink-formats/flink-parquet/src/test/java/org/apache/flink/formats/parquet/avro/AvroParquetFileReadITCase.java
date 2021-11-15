@@ -44,7 +44,7 @@ import java.util.List;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
-/** */
+/** ITCase for {@link AvroParquetRecordFormat}. */
 public class AvroParquetFileReadITCase extends AbstractTestBase {
 
     private static final int PARALLELISM = 4;
@@ -53,8 +53,7 @@ public class AvroParquetFileReadITCase extends AbstractTestBase {
     private static final String USER_PARQUET_FILE_3 = "user3.parquet";
 
     private Schema schema;
-    private List<GenericRecord> userRecords = new ArrayList<>(3);
-    private Path userPath;
+    private final List<GenericRecord> userRecords = new ArrayList<>(3);
 
     @Before
     public void setup() throws IOException {
@@ -71,15 +70,13 @@ public class AvroParquetFileReadITCase extends AbstractTestBase {
                                         + "    ]\n"
                                         + "    }");
 
-        userPath = Path.fromLocalFile(TEMPORARY_FOLDER.newFile(USER_PARQUET_FILE_1));
-
         userRecords.add(createUser("Peter", 1, "red"));
         userRecords.add(createUser("Tom", 2, "yellow"));
         userRecords.add(createUser("Jack", 3, "green"));
 
         createParquetFile(
                 ParquetAvroWriters.forGenericRecord(schema),
-                userPath,
+                Path.fromLocalFile(TEMPORARY_FOLDER.newFile(USER_PARQUET_FILE_1)),
                 userRecords.toArray(new GenericRecord[0]));
 
         GenericRecord user = createUser("Max", 4, "blue");
