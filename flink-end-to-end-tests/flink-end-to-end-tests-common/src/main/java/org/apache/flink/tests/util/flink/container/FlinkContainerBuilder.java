@@ -158,8 +158,6 @@ public class FlinkContainerBuilder {
         jobManager
                 .withNetworkAliases(FlinkContainer.JOB_MANAGER_HOSTNAME)
                 .withExposedPorts(jobManagerConf.get(RestOptions.PORT));
-        // Add environment variables
-        jobManager.withEnv(envVars);
         // Setup logger
         if (this.logger != null) {
             jobManager.withLogConsumer(new Slf4jLogConsumer(this.logger).withPrefix("JobManager"));
@@ -229,6 +227,8 @@ public class FlinkContainerBuilder {
         }
         // Bind network to container
         container.withNetwork(this.network);
+        // Add environment variables
+        container.withEnv(envVars);
         return container;
     }
 
