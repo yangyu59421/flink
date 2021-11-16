@@ -171,6 +171,9 @@ public class ApplicationDispatcherBootstrap implements DispatcherBootstrap {
                             }
 
                             LOG.warn("Application failed unexpectedly: ", t);
+                            // errorHandler triggers a cluster shutdown. We never prevent shutdown
+                            // in this case as the job likely failed on startup and never reached a
+                            // running state.
                             this.errorHandler.onFatalError(
                                     new FlinkException("Application failed unexpectedly.", t));
                             throw new CompletionException(t);
