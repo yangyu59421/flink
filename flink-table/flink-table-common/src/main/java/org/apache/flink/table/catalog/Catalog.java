@@ -531,8 +531,11 @@ public interface Catalog {
      * @throws FunctionAlreadyExistException if the function with newFunctionName already exists
      * @throws CatalogException in case of any runtime exception
      */
-    void renameFunction(ObjectPath functionPath, String newFunctionName, boolean ignoreIfNotExists)
-            throws FunctionNotExistException, FunctionAlreadyExistException, CatalogException;
+    default void renameFunction(
+            ObjectPath functionPath, String newFunctionName, boolean ignoreIfNotExists)
+            throws FunctionNotExistException, FunctionAlreadyExistException, CatalogException {
+        throw new UnsupportedOperationException("this operation is not supported");
+    }
 
     // ------ statistics ------
 
