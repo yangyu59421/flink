@@ -123,12 +123,12 @@ public class ChangelogStorageMetricGroup extends ProxyMetricGroup<MetricGroup> {
     }
 
     private static final String PREFIX = "changelogStorage";
-    public static final String CHANGELOG_STORAGE_UPLOAD_REQUESTS = PREFIX + ".upload-requests";
-    public static final String CHANGELOG_STORAGE_UPLOAD_FAILURES = PREFIX + ".upload-failures";
-    public static final String CHANGELOG_STORAGE_UPLOAD_SIZES = PREFIX + ".upload-sizes";
-    public static final String CHANGELOG_STORAGE_UPLOAD_LATENCIES = PREFIX + ".upload-latencies";
+    public static final String CHANGELOG_STORAGE_UPLOAD_REQUESTS = PREFIX + ".uploadRequests";
+    public static final String CHANGELOG_STORAGE_UPLOAD_FAILURES = PREFIX + ".uploadFailures";
+    public static final String CHANGELOG_STORAGE_UPLOAD_SIZES = PREFIX + ".uploadSizes";
+    public static final String CHANGELOG_STORAGE_UPLOAD_LATENCIES = PREFIX + ".uploadLatencies";
     public static final String CHANGELOG_STORAGE_ATTEMPTS_PER_UPLOAD =
-            PREFIX + ".attempts-per-upload";
-    public static final String CHANGELOG_STORAGE_LOGS_PER_UPLOAD = PREFIX + ".logs-per-upload";
-    public static final String CHANGELOG_STORAGE_QUEUE_SIZE = PREFIX + ".queue-size";
+            PREFIX + ".attemptsPerUpload";
+    public static final String CHANGELOG_STORAGE_LOGS_PER_UPLOAD = PREFIX + ".logsPerUpload";
+    public static final String CHANGELOG_STORAGE_QUEUE_SIZE = PREFIX + ".queueSize";
 }
