@@ -21,10 +21,9 @@ package org.apache.flink.formats.csv;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.serialization.BulkWriter;
 import org.apache.flink.core.fs.FSDataOutputStream;
-import org.apache.flink.formats.csv.RowDataToCsvConverters.RowDataToCsvFormatConverter
-        .RowDataToCsvFormatConverterContext;
-import org.apache.flink.table.data.RowData;
+import org.apache.flink.formats.csv.RowDataToCsvConverters.RowDataToCsvFormatConverter.RowDataToCsvFormatConverterContext;
 
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -33,20 +32,30 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.csv.Csv
 
 import java.io.IOException;
 
+/** A simple {@link BulkWriter} implementation based on Jackson CSV transformations. */
 @PublicEvolving
-public class CsvBulkWriter implements BulkWriter<RowData> {
+public class CsvBulkWriter<T> implements BulkWriter<T> {
 
     private final FSDataOutputStream stream;
     private final CsvMapper mapper;
-    private final Converter<RowData, JsonNode, RowDataToCsvFormatConverterContext> converter;
+    private final Converter<T, JsonNode, RowDataToCsvFormatConverterContext> converter;
     private final ObjectWriter csvWriter;
-    /** Reusable within the converter **/
+    /** Reusable within the converter * */
     private final transient ObjectNode container;
 
+    /**
+     * Constructs a writer with Jackson schema and a
+     *
+     * @param mapper The specialized mapper for producing CSV.
+     * @param schema The schema that defined the mapping properties.
+     * @param converter The type converter that converts incoming elements of type {@code <T>} into
+     *     elements of type JsonNode.
+     * @param stream The output stream.
+     */
     public CsvBulkWriter(
             CsvMapper mapper,
             CsvSchema schema,
-            Converter<RowData, JsonNode, RowDataToCsvFormatConverterContext> converter,
+            Converter<T, JsonNode, RowDataToCsvFormatConverterContext> converter,
             FSDataOutputStream stream) {
         this.mapper = mapper;
         this.converter = converter;
@@ -54,15 +63,16 @@ public class CsvBulkWriter implements BulkWriter<RowData> {
 
         this.container = mapper.createObjectNode();
         this.csvWriter = mapper.writerFor(JsonNode.class).with(schema);
+
+        // Prevent Jackson's writeValue() method calls from closing the stream.
+        mapper.getFactory().disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
     }
 
     @Override
-    public void addElement(RowData element) throws IOException {
-        System.out.println(element);
-        RowDataToCsvFormatConverterContext context =
+    public void addElement(T element) throws IOException {
+        final RowDataToCsvFormatConverterContext context =
                 new RowDataToCsvFormatConverterContext(mapper, container);
-        JsonNode jsonNode = converter.convert(element, context);
-        System.out.println(jsonNode);
+        final JsonNode jsonNode = converter.convert(element, context);
         csvWriter.writeValue(stream, jsonNode);
     }
 

@@ -53,20 +53,16 @@ import static org.apache.flink.formats.csv.CsvFormatOptions.ARRAY_ELEMENT_DELIMI
 import static org.apache.flink.formats.csv.CsvFormatOptions.DISABLE_QUOTE_CHARACTER;
 import static org.apache.flink.formats.csv.CsvFormatOptions.ESCAPE_CHARACTER;
 import static org.apache.flink.formats.csv.CsvFormatOptions.FIELD_DELIMITER;
-import static org.apache.flink.formats.csv.CsvFormatOptions.IGNORE_PARSE_ERRORS;
 import static org.apache.flink.formats.csv.CsvFormatOptions.NULL_LITERAL;
 import static org.apache.flink.formats.csv.CsvFormatOptions.QUOTE_CHARACTER;
 
 /** CSV format factory for file system. */
 @Internal
-//public class CsvFormatFactory implements BulkReaderFormatFactory {
 public class CsvFormatFactory implements BulkReaderFormatFactory, BulkWriterFormatFactory {
-
-    public static final String IDENTIFIER = "csv";
 
     @Override
     public String factoryIdentifier() {
-        return IDENTIFIER;
+        return CsvCommons.IDENTIFIER;
     }
 
     @Override
@@ -76,34 +72,22 @@ public class CsvFormatFactory implements BulkReaderFormatFactory, BulkWriterForm
 
     @Override
     public Set<ConfigOption<?>> optionalOptions() {
-        Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(FIELD_DELIMITER);
-        options.add(DISABLE_QUOTE_CHARACTER);
-        options.add(QUOTE_CHARACTER);
-        options.add(ALLOW_COMMENTS);
-        options.add(IGNORE_PARSE_ERRORS);
-        options.add(ARRAY_ELEMENT_DELIMITER);
-        options.add(ESCAPE_CHARACTER);
-        options.add(NULL_LITERAL);
-        return options;
+        return CsvCommons.optionalOptions();
     }
 
     // TODO: is it possible to avoid the cast with a reasonable effort?
     @Override
-    @SuppressWarnings({
-        "unchecked",
-        "rawtypes"
-    })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public BulkDecodingFormat<RowData> createDecodingFormat(
             DynamicTableFactory.Context context, ReadableConfig formatOptions) {
         return new BulkDecodingFormat<RowData>() {
             @Override
             public BulkFormat<RowData, FileSourceSplit> createRuntimeDecoder(
                     DynamicTableSource.Context context, DataType physicalDataType) {
-                RowType rowType = (RowType) physicalDataType.getLogicalType();
-                CsvSchema schema = buildCsvSchema(rowType, formatOptions);
+                final RowType rowType = (RowType) physicalDataType.getLogicalType();
+                final CsvSchema schema = buildCsvSchema(rowType, formatOptions);
 
-                Converter<JsonNode, RowData, Void> converter =
+                final Converter<JsonNode, RowData, Void> converter =
                         (Converter)
                                 new CsvToRowDataConverters(false).createRowConverter(rowType, true);
                 return new StreamFormatAdapter<>(
@@ -130,10 +114,10 @@ public class CsvFormatFactory implements BulkReaderFormatFactory, BulkWriterForm
             public BulkWriter.Factory<RowData> createRuntimeEncoder(
                     DynamicTableSink.Context context, DataType physicalDataType) {
 
-                RowType rowType = (RowType) physicalDataType.getLogicalType();
-                CsvSchema schema = buildCsvSchema(rowType, formatOptions);
+                final RowType rowType = (RowType) physicalDataType.getLogicalType();
+                final CsvSchema schema = buildCsvSchema(rowType, formatOptions);
 
-                RowDataToCsvFormatConverter converter =
+                final RowDataToCsvFormatConverter converter =
                         RowDataToCsvConverters.createRowFormatConverter(rowType);
                 return out -> new CsvBulkWriter(new CsvMapper(), schema, converter, out);
             }
@@ -145,18 +129,21 @@ public class CsvFormatFactory implements BulkReaderFormatFactory, BulkWriterForm
         };
     }
 
-
     private CsvSchema buildCsvSchema(RowType rowType, ReadableConfig options) {
-        CsvSchema csvSchema = CsvRowSchemaConverter.convert(rowType);
-        CsvSchema.Builder csvBuilder = csvSchema.rebuild();
+        final CsvSchema csvSchema = CsvRowSchemaConverter.convert(rowType);
+        final CsvSchema.Builder csvBuilder = csvSchema.rebuild();
         // format properties
         options.getOptional(FIELD_DELIMITER)
                 .map(s -> StringEscapeUtils.unescapeJava(s).charAt(0))
                 .ifPresent(csvBuilder::setColumnSeparator);
 
-        options.getOptional(QUOTE_CHARACTER)
-                .map(s -> s.charAt(0))
-                .ifPresent(csvBuilder::setQuoteChar);
+        if (options.get(DISABLE_QUOTE_CHARACTER)) {
+            csvBuilder.disableQuoteChar();
+        } else {
+            options.getOptional(QUOTE_CHARACTER)
+                    .map(s -> s.charAt(0))
+                    .ifPresent(csvBuilder::setQuoteChar);
+        }
 
         options.getOptional(ALLOW_COMMENTS).ifPresent(csvBuilder::setAllowComments);
 

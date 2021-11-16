@@ -202,7 +202,11 @@ public abstract class CsvJsonPlanTestBase extends AbstractTestBase {
                                 + ") %s with (\n"
                                 + "  'connector' = 'filesystem',\n"
                                 + "  'path' = '%s',\n"
-                                + "  'format' = 'csv')",
+                                + "  'format' = 'csv', \n"
+                                + "  'csv.disable-quote-character' = 'true' \n"
+                                //                                + "  'csv.quote-character' = 'a'
+                                // \n"
+                                + ")",
                         tableName,
                         String.join(",\n", fieldNameAndTypes),
                         partitionedBy,

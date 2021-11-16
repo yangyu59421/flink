@@ -14,5 +14,4 @@
 # limitations under the License.
 
 org.apache.flink.formats.csv.CsvFormatFactory
-#org.apache.flink.formats.csv.CsvDeserializerFactory
-#org.apache.flink.table.module.CoreModuleFactory
+org.apache.flink.formats.csv.CsvDeserializerFactory

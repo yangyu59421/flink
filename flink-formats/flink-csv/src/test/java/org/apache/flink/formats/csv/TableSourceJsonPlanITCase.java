@@ -33,7 +33,6 @@ import static org.apache.flink.table.utils.DateTimeUtils.unixTimestampToLocalDat
 /** Test for table source json plan. */
 public class TableSourceJsonPlanITCase extends CsvJsonPlanTestBase {
 
-
     @Test
     public void test() throws Exception {
         List<String> data = Arrays.asList("1,1,hi", "2,1,hello", "3,2,hello world");
