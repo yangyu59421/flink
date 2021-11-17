@@ -541,7 +541,7 @@ catalog.dropFunction(new ObjectPath("mydb", "myfunc"), false);
 catalog.alterFunction(new ObjectPath("mydb", "myfunc"), new CatalogFunctionImpl(...), false);
 
 // rename function
-catalog.renameFunction(new ObjectPath("mydb", "myfunc"), "my_new_func");
+catalog.renameFunction(new ObjectPath("mydb", "myfunc"), "my_new_func", false);
 
 // get function
 catalog.getFunction("myfunc");
@@ -567,6 +567,9 @@ catalog.drop_function(ObjectPath("mydb", "myfunc"), False)
 
 # alter function
 catalog.alter_function(ObjectPath("mydb", "myfunc"), catalog_function, False)
+
+# rename function
+catalog.rename_function(ObjectPath("mydb", "myfunc"), "my_new_func", False)
 
 # get function
 catalog.get_function("myfunc")
