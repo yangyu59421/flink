@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.api;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.factories.TableFactory;
 
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /** Exception for not finding a {@link TableFactory} for the given properties. */
+@PublicEvolving
 public class NoMatchingTableFactoryException extends RuntimeException {
 
     // message that indicates the current matching step

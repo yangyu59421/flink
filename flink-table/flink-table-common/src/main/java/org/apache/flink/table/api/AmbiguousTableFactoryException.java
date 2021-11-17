@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.api;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.factories.TableFactory;
 
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /** Exception for finding more than one {@link TableFactory} for the given properties. */
+@PublicEvolving
 public class AmbiguousTableFactoryException extends RuntimeException {
 
     // factories that match the properties

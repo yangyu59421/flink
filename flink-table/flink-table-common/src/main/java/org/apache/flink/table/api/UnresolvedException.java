@@ -18,7 +18,10 @@
 
 package org.apache.flink.table.api;
 
+import org.apache.flink.annotation.PublicEvolving;
+
 /** Exception for unwanted method calling on unresolved expression. */
+@PublicEvolving
 public class UnresolvedException extends RuntimeException {
     public UnresolvedException(String msg) {
         super(msg);

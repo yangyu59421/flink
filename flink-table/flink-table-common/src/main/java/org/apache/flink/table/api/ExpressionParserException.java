@@ -18,7 +18,10 @@
 
 package org.apache.flink.table.api;
 
+import org.apache.flink.annotation.PublicEvolving;
+
 /** Exception for all errors occurring during expression parsing. */
+@PublicEvolving
 public class ExpressionParserException extends RuntimeException {
 
     public ExpressionParserException(String msg) {
