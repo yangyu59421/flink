@@ -26,7 +26,7 @@ import java.util.Map;
  * <p>Instances of this class can be used to register new metrics with Flink and to create a nested
  * hierarchy based on the group names.
  *
- * <p>A MetricGroup is uniquely identified by it's place in the hierarchy and name.
+ * <p>A MetricGroup is uniquely identified by its place in the hierarchy and name.
  */
 public interface MetricGroup {
 

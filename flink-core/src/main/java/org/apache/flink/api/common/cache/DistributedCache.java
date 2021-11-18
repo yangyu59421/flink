@@ -56,6 +56,7 @@ public class DistributedCache {
      * original directory. After the upload to the cluster (which includes zipping the directory),
      * {@code filePath} denotes the (server-side) copy of the zip.
      */
+    @Public
     public static class DistributedCacheEntry implements Serializable {
 
         public String filePath;

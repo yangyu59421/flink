@@ -1036,6 +1036,7 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
     // ------------------------------ Utilities  ----------------------------------
 
+    @Public
     public static class SerializableSerializer<T extends Serializer<?> & Serializable>
             implements Serializable {
         private static final long serialVersionUID = 4687893502781067189L;
@@ -1057,6 +1058,7 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
      * <p>This user config is accessible at runtime through
      * getRuntimeContext().getExecutionConfig().GlobalJobParameters()
      */
+    @Public
     public static class GlobalJobParameters implements Serializable {
         private static final long serialVersionUID = 1L;
 
@@ -1086,6 +1088,7 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
     }
 
     /** Configuration settings for the closure cleaner. */
+    @Public
     public enum ClosureCleanerLevel implements DescribedEnum {
         NONE(text("Disables the closure cleaner completely.")),
 
