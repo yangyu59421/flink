@@ -116,12 +116,11 @@ public class ExecutionConfigOptions {
                     .enumType(NotNullEnforcer.class)
                     .defaultValue(NotNullEnforcer.ERROR)
                     .withDescription(
-                            "The NOT NULL column constraint on a table enforces that "
-                                    + "null values can't be inserted into the table. Flink supports "
-                                    + "'error' (default) and 'drop' enforcement behavior. By default, "
-                                    + "Flink will check values and throw runtime exception when null values writing "
-                                    + "into NOT NULL columns. Users can change the behavior to 'drop' to "
-                                    + "silently drop such records without throwing exception.");
+                            "Determines whether the NOT NULL column constraint on a table enforces that "
+                                    + "null values can't be inserted into the table. By default, "
+                                    + "Flink will check values and throw runtime exception when attempting "
+                                    + "to write null values writing into NOT NULL columns. Users can change "
+                                    + "the behavior to silently drop such records without throwing exception.");
 
     @Documentation.TableOption(execMode = Documentation.ExecMode.BATCH_STREAMING)
     public static final ConfigOption<CharPrecisionEnforcer>
@@ -395,11 +394,20 @@ public class ExecutionConfigOptions {
     // ------------------------------------------------------------------------------------------
 
     /** The enforcer to guarantee NOT NULL column constraint when writing data into sink. */
-    public enum NotNullEnforcer {
-        /** Throws runtime exception when writing null values into NOT NULL column. */
-        ERROR,
-        /** Drop records when writing null values into NOT NULL column. */
-        DROP
+    public enum NotNullEnforcer implements DescribedEnum {
+        ERROR(text("Throws runtime exception when writing null values into NOT NULL column.")),
+        DROP(text("Drops records when writing null values into NOT NULL column."));
+
+        private final InlineElement description;
+
+        NotNullEnforcer(InlineElement description) {
+            this.description = description;
+        }
+
+        @Override
+        public InlineElement getDescription() {
+            return description;
+        }
     }
 
     /**
