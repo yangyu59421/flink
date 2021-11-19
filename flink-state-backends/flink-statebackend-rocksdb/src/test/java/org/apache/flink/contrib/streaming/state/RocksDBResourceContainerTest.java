@@ -19,6 +19,7 @@
 package org.apache.flink.contrib.streaming.state;
 
 import org.apache.flink.runtime.memory.OpaqueMemoryResource;
+import org.apache.flink.util.StringUtils;
 import org.apache.flink.util.function.ThrowingRunnable;
 
 import org.junit.BeforeClass;
@@ -38,6 +39,7 @@ import org.rocksdb.TableFormatConfig;
 import org.rocksdb.WriteBufferManager;
 import org.rocksdb.WriteOptions;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -321,5 +323,18 @@ public class RocksDBResourceContainerTest {
             assertThat(getFilterFromBlockBasedTableConfig(actual), not(blockBasedFilter));
         }
         assertFalse("Block based filter is left unclosed.", blockBasedFilter.isOwningHandle());
+    }
+
+    @Test
+    public void testRelocateDBOptionsLogDir() throws Exception {
+        final RocksDBResourceContainer container = new RocksDBResourceContainer();
+        DBOptions dbOptions = container.getDbOptions();
+        assertThat(StringUtils.isNullOrWhitespaceOnly(dbOptions.dbLogDir()), is(true));
+
+        final File logFile = File.createTempFile(getClass().getSimpleName() + "-", ".log");
+        System.setProperty("log.file", logFile.getPath());
+        dbOptions = container.getDbOptions();
+        assertThat(dbOptions.dbLogDir(), is(logFile.getParent()));
+        logFile.delete();
     }
 }

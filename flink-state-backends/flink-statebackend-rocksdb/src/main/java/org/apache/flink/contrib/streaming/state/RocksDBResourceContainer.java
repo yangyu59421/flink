@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.memory.OpaqueMemoryResource;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.StringUtils;
 
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 
@@ -93,6 +95,8 @@ public final class RocksDBResourceContainer implements AutoCloseable {
     public DBOptions getDbOptions() {
         // initial options from pre-defined profile
         DBOptions opt = predefinedOptions.createDBOptions(handlesToClose);
+        // relocate the default log directory of the RocksDB
+        relocateLogDir(opt);
         handlesToClose.add(opt);
 
         // add user-defined options factory, if specified
@@ -253,5 +257,30 @@ public final class RocksDBResourceContainer implements AutoCloseable {
         Object filter = filterField.get(blockBasedTableConfig);
         filterField.setAccessible(false);
         return filter == null ? null : (Filter) filter;
+    }
+
+    /**
+     * Relocate RocksDB's log under Flink log directory by default. Finds the Flink log directory
+     * using log.file Java property that is set during startup.
+     */
+    private void relocateLogDir(DBOptions dbOptions) {
+        String logFilePath = System.getProperty("log.file");
+        if (!StringUtils.isNullOrWhitespaceOnly(logFilePath)) {
+            File logFile = resolveFileLocation(logFilePath);
+            if (logFile != null && resolveFileLocation(logFile.getParent()) != null) {
+                dbOptions.setDbLogDir(logFile.getParent());
+            }
+        }
+    }
+
+    /**
+     * Verify log file location.
+     *
+     * @param logFilePath Path to log file
+     * @return File or null if not a valid log file
+     */
+    private static File resolveFileLocation(String logFilePath) {
+        File logFile = new File(logFilePath);
+        return (logFile.exists() && logFile.canRead()) ? logFile : null;
     }
 }
