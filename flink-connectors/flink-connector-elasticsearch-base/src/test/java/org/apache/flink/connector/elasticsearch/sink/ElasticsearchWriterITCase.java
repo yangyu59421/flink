@@ -18,7 +18,6 @@
 package org.apache.flink.connector.elasticsearch.sink;
 
 import org.apache.flink.api.common.operators.MailboxExecutor;
-import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.connectors.test.common.junit.extensions.TestLoggerExtension;
 import org.apache.flink.metrics.Counter;
@@ -33,7 +32,6 @@ import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.function.ThrowingRunnable;
 
 import org.apache.http.HttpHost;
-import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -52,12 +50,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Optional;
 
 import static org.apache.flink.connector.elasticsearch.sink.TestClientBase.buildMessage;
-import static org.apache.flink.runtime.testutils.CommonTestUtils.waitUntilCondition;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -137,7 +133,7 @@ class ElasticsearchWriterITCase {
             context.assertThatIdsAreNotWritten(index, 6);
 
             // Force flush
-            writer.prepareCommit(true);
+            writer.blockingFlushAllActions();
             context.assertThatIdsAreWritten(index, 1, 2, 3, 4, 5, 6);
         }
     }
@@ -157,18 +153,10 @@ class ElasticsearchWriterITCase {
             writer.write(Tuple2.of(2, buildMessage(2)), null);
             writer.write(Tuple2.of(3, buildMessage(3)), null);
             writer.write(Tuple2.of(4, buildMessage(4)), null);
-            waitUntilCondition(
-                    () -> {
-                        try {
-                            context.assertThatIdsAreWritten(index, 1, 2, 3, 4);
-                            return true;
-                        } catch (ElasticsearchStatusException e) {
-                            return false;
-                        }
-                    },
-                    // Wait for at-least one flush to happen
-                    Deadline.fromNow(Duration.ofSeconds(2)));
+            writer.blockingFlushAllActions();
         }
+
+        context.assertThatIdsAreWritten(index, 1, 2, 3, 4);
     }
 
     @Test
@@ -220,12 +208,16 @@ class ElasticsearchWriterITCase {
             writer.write(Tuple2.of(1, buildMessage(1)), null);
             writer.write(Tuple2.of(2, buildMessage(2)), null);
 
+            writer.blockingFlushAllActions();
+
             long first = numBytesOut.getCount();
 
             assertTrue(first > 0);
 
             writer.write(Tuple2.of(1, buildMessage(1)), null);
             writer.write(Tuple2.of(2, buildMessage(2)), null);
+
+            writer.blockingFlushAllActions();
 
             assertTrue(numBytesOut.getCount() > first);
         }
@@ -251,6 +243,8 @@ class ElasticsearchWriterITCase {
                     metricListener.getGauge("currentSendTime");
             writer.write(Tuple2.of(1, buildMessage(1)), null);
             writer.write(Tuple2.of(2, buildMessage(2)), null);
+
+            writer.blockingFlushAllActions();
 
             assertTrue(currentSendTime.isPresent());
             assertThat(currentSendTime.get().getValue(), greaterThan(0L));

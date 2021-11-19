@@ -18,6 +18,7 @@
 
 package org.apache.flink.connector.elasticsearch.sink;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.operators.MailboxExecutor;
 import org.apache.flink.api.connector.sink.SinkWriter;
 import org.apache.flink.metrics.Counter;
@@ -140,6 +141,15 @@ class ElasticsearchWriter<IN> implements SinkWriter<IN, Void, Void> {
         }
         checkpointInProgress = false;
         return Collections.emptyList();
+    }
+
+    @VisibleForTesting
+    void blockingFlushAllActions() throws InterruptedException {
+        while (pendingActions != 0) {
+            bulkProcessor.flush();
+            LOG.info("Waiting for the response of {} pending actions.", pendingActions);
+            mailboxExecutor.yield();
+        }
     }
 
     @Override
