@@ -157,22 +157,11 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
     public ClusterClientProvider<String> deploySessionCluster(
             ClusterSpecification clusterSpecification) throws ClusterDeploymentException {
         final SupplierWithException<ClusterClientProvider<String>, Exception> supplier =
-                () -> {
-                    ClusterClientProvider<String> clusterClientProvider =
-                            deployClusterInternal(
-                                    KubernetesSessionClusterEntrypoint.class.getName(),
-                                    clusterSpecification,
-                                    false);
-
-                    try (ClusterClient<String> clusterClient =
-                            clusterClientProvider.getClusterClient()) {
-                        LOG.info(
-                                "Create flink session cluster {} successfully, JobManager Web Interface: {}",
-                                clusterId,
-                                clusterClient.getWebInterfaceURL());
-                    }
-                    return clusterClientProvider;
-                };
+                () ->
+                        deployClusterInternal(
+                                KubernetesSessionClusterEntrypoint.class.getName(),
+                                clusterSpecification,
+                                false);
 
         return safelyDeployCluster(supplier);
     }
@@ -213,22 +202,11 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
         }
 
         final SupplierWithException<ClusterClientProvider<String>, Exception> supplier =
-                () -> {
-                    ClusterClientProvider<String> clusterClientProvider =
-                            deployClusterInternal(
-                                    KubernetesApplicationClusterEntrypoint.class.getName(),
-                                    clusterSpecification,
-                                    false);
-
-                    try (ClusterClient<String> clusterClient =
-                            clusterClientProvider.getClusterClient()) {
-                        LOG.info(
-                                "Create flink application cluster {} successfully, JobManager Web Interface: {}",
-                                clusterId,
-                                clusterClient.getWebInterfaceURL());
-                    }
-                    return clusterClientProvider;
-                };
+                () ->
+                        deployClusterInternal(
+                                KubernetesApplicationClusterEntrypoint.class.getName(),
+                                clusterSpecification,
+                                false);
 
         return safelyDeployCluster(supplier);
     }
@@ -293,7 +271,16 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
             SupplierWithException<ClusterClientProvider<String>, Exception> supplier)
             throws ClusterDeploymentException {
         try {
-            return supplier.get();
+
+            ClusterClientProvider<String> clusterClientProvider = supplier.get();
+
+            try (ClusterClient<String> clusterClient = clusterClientProvider.getClusterClient()) {
+                LOG.info(
+                        "Create flink cluster {} successfully, JobManager Web Interface: {}",
+                        clusterId,
+                        clusterClient.getWebInterfaceURL());
+            }
+            return clusterClientProvider;
         } catch (Exception e) {
             try {
                 client.stopAndCleanupCluster(clusterId);
