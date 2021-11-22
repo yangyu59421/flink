@@ -57,7 +57,7 @@ Flink 1.14 引入了一个新的工具用于自动控制在 Flink 算子/子任�
 包含 In-flight 数据(如缓存中的数据)作为 Checkpoint State的一部分，允许 Checkpoint Barrier 跨越这些缓冲区。因此，
 Checkpoint 时长变得与当前吞吐量无关，因为事实上 Checkpoint Barrier 已经不再嵌入在数据流之中。
 
-您应该使用非对齐 Checkpoint，如果您的 Checkpointing 由于背压导致周期非常的长。于是，Checkpointing 时间基本上就独立
+如果您的 Checkpointing 由于背压导致周期非常的长，您应该使用非对齐 Checkpoint。这样，Checkpointing 时间基本上就独立
 于端到端延迟。请注意，非对齐 Checkpointing 会增加到状态存储的 I/O，因此当到状态存储的 I/O 是 Checkpointing 过程中真
 正的瓶颈时，您不应当使用它。
 
